@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="Theme.Vlast" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#090D16</item>
+        <item name="android:navigationBarColor">#090D16</item>
+    </style>
 
-    <style name="Theme.MyApplication" parent="android:Theme.DeviceDefault.NoActionBar" />
+    <style name="Theme.Vlast.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#090D16</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_vlast_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Vlast</item>
+    </style>
 </resources>

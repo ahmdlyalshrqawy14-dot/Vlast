@@ -1,7 +1,13 @@
 package com.example.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,16 +17,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SimCard
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,26 +38,37 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.example.R
 import com.example.core.sim.DualSimManager
 import com.example.ui.theme.NumberFontFamily
 import com.example.ui.theme.VlastTokens
 
 /**
- * Screen 4: Settings & About Vlast (Items 2, 5, 13, 14, 16, 18, 24, 29):
+ * Screen 4: Settings & About Vlast (Items 2, 5, 13, 14, 16, 18, 24, 29 & Sections 4, 8, 11):
  * - Dark Mode / Light Mode toggle (Item 2)
- * - Dual SIM selection (Item 13)
+ * - Dual SIM selection & READ_PHONE_STATE permission flow (Section 11)
  * - Settings PIN lock toggle (Item 16)
- * - Dedicated cut sound toggle (Item 29)
+ * - Dedicated cut sound toggle (Section 2)
+ * - Color-blind mode toggle (Section 8)
+ * - Language selector (Arabic / English) (Section 4)
  * - Clarification of Android VPN Key (Item 14)
- * - Rich "About Vlast" displaying authority & control meaning (Item 24 & 18)
+ * - Sovereign "About Vlast" (Items 18 & 24)
+ * - Per-App Control entrance on Android 10+ (Phase 4)
  */
 @Composable
 fun SettingsScreen(
@@ -58,12 +77,37 @@ fun SettingsScreen(
     activeSimSlot: Int,
     availableSims: List<DualSimManager.SimSlotInfo>,
     onSelectSim: (Int) -> Unit,
+    onRefreshSims: () -> Unit = {},
     isPinLockEnabled: Boolean,
     onTogglePinLock: (Boolean) -> Unit,
     isSoundEnabled: Boolean,
     onToggleSound: (Boolean) -> Unit,
+    isColorBlindMode: Boolean,
+    onToggleColorBlindMode: (Boolean) -> Unit,
+    currentLanguage: String = "ar",
+    onSelectLanguage: (String) -> Unit = {},
+    onNavigateToAppControl: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    var hasPhonePermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_PHONE_STATE
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPhonePermission = granted
+        if (granted) {
+            onRefreshSims()
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -73,7 +117,7 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(VlastTokens.Space16)
     ) {
         Text(
-            text = "الإعدادات العامة",
+            text = stringResource(R.string.settings_title),
             color = VlastTokens.TextPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -83,8 +127,8 @@ fun SettingsScreen(
         // Appearance: Dark / Light Mode (Item 2)
         SettingCard(
             icon = Icons.Filled.DarkMode,
-            title = "المظهر الداكن (Dark Mode)",
-            subtitle = "الوضع الليلي الافتراضي ذو الطابع القوي والتباين العالي"
+            title = stringResource(R.string.appearance_dark_mode),
+            subtitle = stringResource(R.string.appearance_dark_desc)
         ) {
             Switch(
                 checked = isDarkMode,
@@ -98,61 +142,78 @@ fun SettingsScreen(
             )
         }
 
-        // Dual SIM Controls (Item 13)
-        if (availableSims.size > 1) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(VlastTokens.RadiusMedium))
-                    .background(VlastTokens.DarkSurface)
-                    .border(1.dp, VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusMedium))
-                    .padding(VlastTokens.Space16)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(VlastTokens.Space8)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
-                    ) {
-                        Icon(Icons.Filled.SimCard, contentDescription = null, tint = VlastTokens.BrandCyan)
-                        Text(
-                            text = "الشريحة النشطة لإدارة البيانات (Dual SIM)",
-                            color = VlastTokens.TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+        // Color-blind Accessible Mode (Section 8)
+        SettingCard(
+            icon = Icons.Filled.Palette,
+            title = stringResource(R.string.color_blind_title),
+            subtitle = stringResource(R.string.color_blind_desc)
+        ) {
+            Switch(
+                checked = isColorBlindMode,
+                onCheckedChange = onToggleColorBlindMode,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = VlastTokens.BrandCyan,
+                    checkedTrackColor = VlastTokens.BrandCyan.copy(alpha = 0.3f),
+                    uncheckedThumbColor = VlastTokens.TextMuted,
+                    uncheckedTrackColor = VlastTokens.DarkBackground
+                )
+            )
+        }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        availableSims.forEach { sim ->
-                            val isSelected = activeSimSlot == sim.slotIndex
-                            Button(
-                                onClick = { onSelectSim(sim.slotIndex) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isSelected) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant,
-                                    contentColor = if (isSelected) VlastTokens.DarkBackground else VlastTokens.TextSecondary
-                                ),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = sim.displayName,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
-                    }
+        // App Language (Section 4)
+        SettingCard(
+            icon = Icons.Filled.Language,
+            title = stringResource(R.string.language_title),
+            subtitle = stringResource(R.string.language_desc)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedButton(
+                    onClick = { onSelectLanguage("ar") },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentLanguage == "ar") VlastTokens.BrandCyan.copy(alpha = 0.2f) else Color.Transparent,
+                        contentColor = if (currentLanguage == "ar") VlastTokens.BrandCyan else VlastTokens.TextMuted
+                    ),
+                    modifier = Modifier.size(width = 68.dp, height = 36.dp)
+                ) {
+                    Text("عربي", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = { onSelectLanguage("en") },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (currentLanguage == "en") VlastTokens.BrandCyan.copy(alpha = 0.2f) else Color.Transparent,
+                        contentColor = if (currentLanguage == "en") VlastTokens.BrandCyan else VlastTokens.TextMuted
+                    ),
+                    modifier = Modifier.size(width = 68.dp, height = 36.dp)
+                ) {
+                    Text("EN", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // PIN Security Lock for Settings (Item 16)
+        // Dedicated Cut Sound System (Section 2)
+        SettingCard(
+            icon = Icons.Filled.VolumeUp,
+            title = stringResource(R.string.sound_alert_title),
+            subtitle = stringResource(R.string.sound_alert_desc)
+        ) {
+            Switch(
+                checked = isSoundEnabled,
+                onCheckedChange = onToggleSound,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = VlastTokens.BrandCyan,
+                    checkedTrackColor = VlastTokens.BrandCyan.copy(alpha = 0.3f),
+                    uncheckedThumbColor = VlastTokens.TextMuted,
+                    uncheckedTrackColor = VlastTokens.DarkBackground
+                )
+            )
+        }
+
+        // PIN Security Lock for Settings (Item 16 & Section 7)
         SettingCard(
             icon = Icons.Filled.Lock,
-            title = "قفل شاشة الإعدادات برمز PIN",
-            subtitle = "حماية إضافية تمنع التلاعب بالحدود أو تخفيضها بدون مصادقة"
+            title = stringResource(R.string.pin_lock_title),
+            subtitle = stringResource(R.string.pin_lock_desc)
         ) {
             Switch(
                 checked = isPinLockEnabled,
@@ -166,22 +227,80 @@ fun SettingsScreen(
             )
         }
 
-        // Dedicated Cut Sound System (Item 29)
-        SettingCard(
-            icon = Icons.Filled.VolumeUp,
-            title = "صوت التنبيه الخاص عند القطع",
-            subtitle = "نغمة حصرية قصيرة جدًا (0.5 ثانية) عند لحظة قطع الاتصال"
+        // Dual SIM Controls & Permission (Section 11)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(VlastTokens.RadiusMedium))
+                .background(VlastTokens.DarkSurface)
+                .border(1.dp, VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusMedium))
+                .padding(VlastTokens.Space16)
         ) {
-            Switch(
-                checked = isSoundEnabled,
-                onCheckedChange = onToggleSound,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = VlastTokens.BrandCyan,
-                    checkedTrackColor = VlastTokens.BrandCyan.copy(alpha = 0.3f),
-                    uncheckedThumbColor = VlastTokens.TextMuted,
-                    uncheckedTrackColor = VlastTokens.DarkBackground
-                )
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(VlastTokens.Space12)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
+                ) {
+                    Icon(Icons.Filled.SimCard, contentDescription = null, tint = VlastTokens.BrandCyan)
+                    Text(
+                        text = stringResource(R.string.dual_sim_title),
+                        color = VlastTokens.TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (!hasPhonePermission) {
+                    // Explanatory card for requesting READ_PHONE_STATE permission
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                            .background(VlastTokens.DarkSurfaceVariant)
+                            .border(1.dp, VlastTokens.BrandAmber.copy(alpha = 0.4f), RoundedCornerShape(VlastTokens.RadiusSmall))
+                            .padding(VlastTokens.Space12)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = stringResource(R.string.read_phone_permission_desc),
+                                color = VlastTokens.TextSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+                            Button(
+                                onClick = { permissionLauncher.launch(Manifest.permission.READ_PHONE_STATE) },
+                                colors = ButtonDefaults.buttonColors(containerColor = VlastTokens.BrandAmber, contentColor = VlastTokens.DarkBackground),
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text(stringResource(R.string.grant_permission_btn), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    availableSims.forEach { sim ->
+                        val isSelected = activeSimSlot == sim.slotIndex
+                        Button(
+                            onClick = { onSelectSim(sim.slotIndex) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSelected) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant,
+                                contentColor = if (isSelected) VlastTokens.DarkBackground else VlastTokens.TextSecondary
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = sim.displayName,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // Clarification: Android VPN Key Notification (Item 14)
@@ -200,14 +319,14 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Filled.Security, contentDescription = null, tint = VlastTokens.BrandCyan)
                     Text(
-                        text = "لماذا تظهر أيقونة المفتاح في شريط الحالة؟",
+                        text = stringResource(R.string.vpn_key_info_title),
                         color = VlastTokens.TextPrimary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 Text(
-                    text = "نظام أندرويد يفرض ظهور أيقونة المفتاح إجباريًا لأي تطبيق يستخدم واجهة VpnService المحلية. تطبيق Vlast لا يُرسل أي بيانات إلى خوادم خارجية؛ هو نفق محلي تمامًا داخل جهازك فقط لقياس البايتات وفرض الحدود بدون روت.",
+                    text = stringResource(R.string.vpn_key_info_desc),
                     color = VlastTokens.TextSecondary,
                     fontSize = 11.sp,
                     lineHeight = 16.sp
@@ -215,7 +334,66 @@ fun SettingsScreen(
             }
         }
 
-        // About Vlast (Items 18 & 24)
+        // Phase 4: Per-App Control entrance (Strictly visible only on Android 10+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(VlastTokens.RadiusMedium))
+                    .background(VlastTokens.DarkSurface)
+                    .border(1.dp, VlastTokens.BrandCyan.copy(alpha = 0.5f), RoundedCornerShape(VlastTokens.RadiusMedium))
+                    .clickable(onClick = onNavigateToAppControl)
+                    .padding(VlastTokens.Space16)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space12),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(VlastTokens.BrandCyan.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Tune,
+                                contentDescription = null,
+                                tint = VlastTokens.BrandCyan,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "التحكم بالتطبيقات",
+                                color = VlastTokens.TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "حظر اتصال أو تحديد حد استهلاك يومي لكل تطبيق بشكل مستقل",
+                                color = VlastTokens.TextMuted,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = VlastTokens.BrandCyan,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        // Sovereign "About Vlast" (Items 18 & 24)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -230,20 +408,20 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
             ) {
                 Text(
-                    text = "Vlast",
+                    text = stringResource(R.string.about_vlast_title),
                     fontFamily = NumberFontFamily,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = VlastTokens.BrandRed
                 )
                 Text(
-                    text = "السلطة والتحكم والسيطرة الكاملة",
+                    text = stringResource(R.string.about_vlast_tagline),
                     color = VlastTokens.BrandAmber,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "كلمة Vlast تعني السلطة والحكم والسيطرة الحاسمة. صُمم هذا النظام ليمنحك السيادة المطلقة على استهلاك حزم بيانات الإنترنت الخاصة بك، وضمان عدم استنزافها أبدًا خارج الحدود التي ترسمها بنفسك.",
+                    text = stringResource(R.string.about_vlast_desc),
                     color = VlastTokens.TextSecondary,
                     fontSize = 11.sp,
                     textAlign = TextAlign.Center,

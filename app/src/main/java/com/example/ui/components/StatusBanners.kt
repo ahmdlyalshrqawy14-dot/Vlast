@@ -262,6 +262,10 @@ fun VlastConfirmationDialog(
             "تأكيد تخفيض الحد الدائم",
             "أنت على وشك تخفيض الحد اليومي الدائم. قد يؤدي ذلك إلى قطع الاتصال فورًا إذا كان استهلاكك الحالي قد تجاوز الحد الجديد."
         )
+        is VlastMechanicsViewModel.ConfirmationRequest.EnableAppBlock -> Pair(
+            "تأكيد حظر تطبيق ${request.appName}",
+            "أنت على وشك حظر ${request.appName} بالكامل من استخدام الإنترنت (Wi-Fi وبيانات الهاتف). لن يتمكن التطبيق من إرسال أو استقبال أي بيانات. هل تريد المتابعة؟"
+        )
     }
 
     AlertDialog(

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vlast</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_reports">التقارير</string>
+    <string name="nav_hotspot">نقطة الاتصال</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- Dashboard & Cards -->
+    <string name="remaining_title">المتبقي</string>
+    <string name="used_title">المستهلك</string>
+    <string name="daily_limit">الحد اليومي</string>
+    <string name="no_limit">غير محدد</string>
+    <string name="wifi_label">واي فاي</string>
+    <string name="mobile_label">بيانات الهاتف</string>
+    <string name="sim1_label">الشريحة 1</string>
+    <string name="sim2_label">الشريحة 2</string>
+    <string name="kill_switch_title">القطع الكامل اليدوي</string>
+    <string name="kill_switch_desc">حظر فوري وشامل لجميع البيانات (أعلى أولوية لا تلغى تلقائيًا)</string>
+    <string name="recurring_limit_title">الحد اليومي الدائم</string>
+    <string name="recurring_limit_desc">يتجدد تلقائيًا كل ليلة عند منتصف الليل</string>
+    <string name="today_override_title">حد اليوم المؤقت (استثناء)</string>
+    <string name="today_override_desc">يسري لليوم فقط ويُلغى تلقائيًا عند منتصف الليل</string>
+    <string name="edit_limit">تعديل</string>
+    <string name="set_limit">تحديد</string>
+    <string name="cancel_limit_long_press">إلغاء (ضغط مطول)</string>
+    <string name="active_status">مفعل</string>
+    <string name="inactive_status">متوقف</string>
+    <string name="resume_data">استئناف البيانات</string>
+    <string name="cut_all_now">قطع كامل الآن</string>
+
+    <!-- Reports -->
+    <string name="tab_activity_logs">سجل الأحداث</string>
+    <string name="tab_historical_charts">الرسوم التاريخية</string>
+    <string name="reports_title">سجل الأنشطة وانقطاع البيانات</string>
+    <string name="reports_subtitle">توثيق رسمي دقيق لكل لحظة قطع أو استئناف مع بيان السبب الصريح</string>
+    <string name="filter_all">الكل</string>
+    <string name="filter_cut">انقطاع</string>
+    <string name="filter_restored">استئناف</string>
+    <string name="filter_system">نظامي</string>
+    <string name="history_7_days">آخر 7 أيام</string>
+    <string name="history_30_days">آخر 30 يوم</string>
+    <string name="history_total_wifi">إجمالي الواي فاي</string>
+    <string name="history_total_mobile">إجمالي الموبايل</string>
+    <string name="history_total_period">الإجمالي العام</string>
+    <string name="history_date">التاريخ</string>
+    <string name="history_no_data">لا توجد سجلات استهلاك تاريخية حتى الآن.</string>
+
+    <!-- Hotspot -->
+    <string name="hotspot_title">نقطة الاتصال (Hotspot)</string>
+    <string name="hotspot_notice">وفقًا لمتطلبات Vlast: نقطة الاتصال تقاس بدقة وبشكل مستقل دون تطبيق أي قطع لحركة الأجهزة المتصلة بها.</string>
+    <string name="hotspot_hero_title">استهلاك نقطة الاتصال اليوم</string>
+    <string name="hotspot_refresh_btn">تحديث قياس الهوت سبوت الآن</string>
+    <string name="hotspot_alert_title">تنبيه تجاوز حد الهوت سبوت</string>
+    <string name="hotspot_alert_desc">إشعار تحذيري فقط دون أي قطع للبيانات</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات العامة</string>
+    <string name="appearance_dark_mode">المظهر الداكن (Dark Mode)</string>
+    <string name="appearance_dark_desc">الوضع الليلي الافتراضي ذو الطابع القوي والتباين العالي</string>
+    <string name="sound_alert_title">نغمة تنبيه القطع الصوتي</string>
+    <string name="sound_alert_desc">تشغيل نغمة تحذيرية حازمة لحظة قطع البيانات</string>
+    <string name="color_blind_title">نمط عمى الألوان (Color-blind)</string>
+    <string name="color_blind_desc">لوحة ألوان فائقة التباين مع رموز مرئية صريحة (✓ ! ✕)</string>
+    <string name="language_title">لغة التطبيق</string>
+    <string name="language_desc">التبديل الفوري بين العربية والإنجليزية</string>
+    <string name="pin_lock_title">قفل الإعدادات برمز PIN</string>
+    <string name="pin_lock_desc">طلب رمز PIN لحماية الإعدادات وتعديل الحدود</string>
+    <string name="dual_sim_title">تحديد شريحة المراقبة</string>
+    <string name="dual_sim_desc">تحديد الشريحة النشطة لمراقبة استهلاكها</string>
+    <string name="read_phone_permission_title">إذن الشريحة المزدوجة</string>
+    <string name="read_phone_permission_desc">يلزم إذن الهاتف لقراءة وتحديد أسماء مشغلي الشرائح بدقة</string>
+    <string name="grant_permission_btn">منح الإذن</string>
+    <string name="vpn_key_info_title">لماذا تظهر أيقونة المفتاح في شريط الحالة؟</string>
+    <string name="vpn_key_info_desc">نظام أندرويد يفرض ظهور أيقونة المفتاح إجباريًا لأي تطبيق يستخدم واجهة VpnService المحلية. تطبيق Vlast لا يُرسل أي بيانات إلى خوادم خارجية؛ هو نفق محلي تمامًا داخل جهازك فقط لقياس البايتات وفرض الحدود بدون روت.</string>
+    <string name="about_vlast_title">Vlast</string>
+    <string name="about_vlast_tagline">السلطة والتحكم والسيطرة الكاملة</string>
+    <string name="about_vlast_desc">كلمة Vlast تعني السلطة والحكم والسيطرة الحاسمة. صُمم هذا النظام ليمنحك السيادة المطلقة على استهلاك حزم بيانات الإنترنت الخاصة بك، وضمان عدم استنزافها أبدًا خارج الحدود التي ترسمها بنفسك.</string>
+    <string name="pin_prompt_title">رمز الحماية</string>
+    <string name="pin_prompt_desc">أدخل رمز PIN المكون من 4 أرقام للمتابعة</string>
+    <string name="pin_error">الرمز غير صحيح. حاول مجددًا.</string>
+    <string name="unlock_btn">فتح</string>
+    <string name="cancel_btn">إلغاء</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_kill_switch_short">القطع الكامل</string>
+    <string name="shortcut_kill_switch_long">تفعيل أو إيقاف القطع الكامل</string>
+    <string name="shortcut_remaining_short">المتبقي</string>
+    <string name="shortcut_remaining_long">عرض رصيد البيانات المتبقي</string>
+
+    <!-- Widgets -->
+    <string name="widget_title">Vlast Data</string>
+    <string name="widget_wifi">Wi-Fi</string>
+    <string name="widget_mobile">Mobile</string>
+    <string name="widget_kill_switch">القطع الكامل</string>
+    <string name="widget_active">مفعل</string>
+    <string name="widget_inactive">متوقف</string>
+    <string name="widget_unlimited">∞</string>
+</resources>

@@ -2,17 +2,18 @@ package com.example.core.rules
 
 import com.example.core.model.DailyUsageRecord
 import com.example.core.model.EnforcementDecision
+import com.example.core.model.ManagedAppRule
 import com.example.core.model.NetworkType
 
 /**
  * Core business rules engine enforcing Vlast data policies.
  *
- * Rules:
- * 1. Zero exceptions: All app/system/DNS traffic must be evaluated.
- * 2. Manual Full Kill Switch has absolute priority over any limits.
- * 3. One-Time Today Override takes precedence over Recurring Limit for the day.
- * 4. Separate evaluation for Wi-Fi and Mobile transports.
- * 5. Clean session termination (not silent drop) upon limit breach to prevent battery drain.
+ * Rules & Evaluation Order (Strict Section 3):
+ * 1. Manual Full Kill Switch has absolute priority over any limits (all traffic blocked).
+ * 2. Per-App Full Block (isFullyBlocked) stops application immediately.
+ * 3. General Network Limit (Wi-Fi / Mobile as per active SIM) applies to all traffic.
+ * 4. Per-App Daily Limit (dailyLimitEnabled) blocks specific app exceeding its quota.
+ * 5. Clean session termination (generateCleanTerminationPacket) upon limit breach to prevent battery drain.
  */
 object EnforcementRulesEngine {
 
@@ -22,35 +23,58 @@ object EnforcementRulesEngine {
     fun evaluate(
         record: DailyUsageRecord,
         networkType: NetworkType,
-        killSwitchOverride: Boolean = false
+        killSwitchOverride: Boolean = false,
+        appRule: ManagedAppRule? = null,
+        simSlot: Int = 0
     ): EnforcementDecision {
         // Priority 1: Manual Full Kill Switch (manual only, never auto-cancelled)
         if (killSwitchOverride || record.killSwitchEnabled) {
             return EnforcementDecision.BlockedKillSwitch
         }
 
+        // Priority 2: Per-App Full Block (isFullyBlocked)
+        if (appRule != null && appRule.isFullyBlocked) {
+            return EnforcementDecision.BlockedAppFull(
+                packageName = appRule.packageName,
+                appName = appRule.appDisplayName
+            )
+        }
+
         if (networkType == NetworkType.NONE) {
             return EnforcementDecision.Allowed(networkType, null)
         }
 
-        // Priority 2: Effective limit evaluation for current transport
-        val effectiveLimit = record.getEffectiveLimit(networkType)
-        val used = record.getUsedBytes(networkType)
+        // Priority 3: General Effective Limit evaluation for current transport and SIM slot
+        val effectiveLimit = record.getEffectiveLimit(networkType, simSlot)
+        val used = record.getUsedBytes(networkType, simSlot)
 
-        return if (effectiveLimit != null && effectiveLimit > 0L) {
-            if (used >= effectiveLimit) {
-                EnforcementDecision.BlockedLimitExceeded(
-                    networkType = networkType,
-                    usedBytes = used,
-                    limitBytes = effectiveLimit
-                )
-            } else {
-                val remaining = (effectiveLimit - used).coerceAtLeast(0L)
-                EnforcementDecision.Allowed(networkType, remaining)
-            }
-        } else {
-            EnforcementDecision.Allowed(networkType, null)
+        if (effectiveLimit != null && effectiveLimit > 0L && used >= effectiveLimit) {
+            return EnforcementDecision.BlockedLimitExceeded(
+                networkType = networkType,
+                usedBytes = used,
+                limitBytes = effectiveLimit
+            )
         }
+
+        // Priority 4: Per-App Daily Quota evaluation
+        if (appRule != null && appRule.dailyLimitEnabled && appRule.dailyLimitBytes != null && appRule.dailyLimitBytes > 0L) {
+            if (appRule.usedBytesToday >= appRule.dailyLimitBytes) {
+                return EnforcementDecision.BlockedAppLimitExceeded(
+                    packageName = appRule.packageName,
+                    appName = appRule.appDisplayName,
+                    usedBytes = appRule.usedBytesToday,
+                    limitBytes = appRule.dailyLimitBytes
+                )
+            }
+        }
+
+        val remaining = if (effectiveLimit != null && effectiveLimit > 0L) {
+            (effectiveLimit - used).coerceAtLeast(0L)
+        } else {
+            null
+        }
+
+        return EnforcementDecision.Allowed(networkType, remaining)
     }
 
     /**

@@ -17,8 +17,11 @@ import com.example.core.model.MeterProgressStatus
 import com.example.core.model.NetworkType
 import com.example.core.model.ServicePriorityStatus
 import com.example.core.model.SmartUnitFormatter
+import com.example.core.network.NetworkStatsHelper
 import com.example.core.network.NetworkTracker
 import com.example.core.repository.UsageRepository
+import com.example.core.model.HotspotState
+import com.example.core.rules.HotspotAdaptiveEngine
 import com.example.core.sim.DualSimManager
 import com.example.core.vpn.VlastVpnService
 import kotlinx.coroutines.Job
@@ -28,6 +31,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -56,7 +60,8 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
     val repository = UsageRepository(
         dailyUsageDao = db.dailyUsageDao(),
         appSettingsDao = db.appSettingsDao(),
-        activityLogDao = db.activityLogDao()
+        activityLogDao = db.activityLogDao(),
+        managedAppRuleDao = db.managedAppRuleDao()
     )
     private val networkTracker = NetworkTracker(application)
     val dualSimManager = DualSimManager(application)
@@ -70,6 +75,23 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
 
     val activityLogs: StateFlow<List<ActivityLogEntry>> = repository.observeRecentLogs(50)
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // Phase 4: Per-App Control Rules
+    val appRules: StateFlow<List<com.example.core.model.ManagedAppRule>> = repository.observeAllAppRules()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // Section 3: Historical consumption charts
+    private val _historyDays = MutableStateFlow(7)
+    val historyDays: StateFlow<Int> = _historyDays.asStateFlow()
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val historicalRecords: StateFlow<List<DailyUsageRecord>> = _historyDays
+        .flatMapLatest { days -> repository.observeRecentHistory(days) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun setHistoryRange(days: Int) {
+        _historyDays.value = days
+    }
 
     // Undo state container for recurring limit changes (Item 9)
     data class UndoState(
@@ -91,6 +113,10 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
             val networkType: NetworkType,
             val newLimitBytes: Long,
             val simSlot: Int
+        ) : ConfirmationRequest()
+        data class EnableAppBlock(
+            val packageName: String,
+            val appName: String
         ) : ConfirmationRequest()
     }
 
@@ -195,7 +221,18 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
                     simSlot = request.simSlot
                 )
             }
+            is ConfirmationRequest.EnableAppBlock -> {
+                setAppFullyBlocked(request.packageName, request.appName, true)
+            }
             null -> {}
+        }
+    }
+
+    fun requestAppBlockToggle(packageName: String, appName: String, targetBlocked: Boolean) {
+        if (targetBlocked) {
+            _activeConfirmation.value = ConfirmationRequest.EnableAppBlock(packageName, appName)
+        } else {
+            setAppFullyBlocked(packageName, appName, false)
         }
     }
 
@@ -381,6 +418,63 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             repository.setSettingsLock(enabled, pin)
             _isSettingsUnlocked.value = !enabled
+        }
+    }
+
+    private val _hotspotEngineState = MutableStateFlow(HotspotState())
+
+    /**
+     * Section 1: Manual refresh of hotspot consumption.
+     */
+    fun refreshHotspotManually() {
+        viewModelScope.launch {
+            val helper = NetworkStatsHelper(getApplication())
+            val bytes = helper.queryHotspotBytesToday()
+            val now = System.currentTimeMillis()
+            val updated = HotspotAdaptiveEngine.onManualRefresh(
+                currentState = _hotspotEngineState.value,
+                manualBytes = bytes,
+                timestamp = now
+            )
+            _hotspotEngineState.value = updated
+            repository.updateHotspotBytes(bytes)
+        }
+    }
+
+    /**
+     * Section 2: Sound Alert toggle.
+     */
+    fun toggleSoundAlert(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.setSoundAlertEnabled(enabled)
+        }
+    }
+
+    /**
+     * Section 8: Color-blind mode toggle.
+     */
+    fun toggleColorBlindMode(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.setColorBlindModeEnabled(enabled)
+        }
+    }
+
+    // Phase 4: Per-App Control actions
+    fun setAppFullyBlocked(packageName: String, appDisplayName: String, isBlocked: Boolean) {
+        viewModelScope.launch {
+            repository.setAppFullyBlocked(packageName, appDisplayName, isBlocked)
+        }
+    }
+
+    fun setAppDailyLimit(packageName: String, appDisplayName: String, limitBytes: Long?, enabled: Boolean) {
+        viewModelScope.launch {
+            repository.setAppDailyLimit(packageName, appDisplayName, limitBytes, enabled)
+        }
+    }
+
+    fun deleteAppRule(packageName: String) {
+        viewModelScope.launch {
+            repository.deleteAppRule(packageName)
         }
     }
 

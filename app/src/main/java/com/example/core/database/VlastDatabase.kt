@@ -7,13 +7,20 @@ import androidx.room.RoomDatabase
 import com.example.core.database.dao.ActivityLogDao
 import com.example.core.database.dao.AppSettingsDao
 import com.example.core.database.dao.DailyUsageDao
+import com.example.core.database.dao.ManagedAppRuleDao
 import com.example.core.database.entity.ActivityLogEntity
 import com.example.core.database.entity.AppSettingsEntity
 import com.example.core.database.entity.DailyUsageEntity
+import com.example.core.database.entity.ManagedAppRuleEntity
 
 @Database(
-    entities = [DailyUsageEntity::class, AppSettingsEntity::class, ActivityLogEntity::class],
-    version = 2,
+    entities = [
+        DailyUsageEntity::class,
+        AppSettingsEntity::class,
+        ActivityLogEntity::class,
+        ManagedAppRuleEntity::class
+    ],
+    version = 4,
     exportSchema = false
 )
 abstract class VlastDatabase : RoomDatabase() {
@@ -21,6 +28,7 @@ abstract class VlastDatabase : RoomDatabase() {
     abstract fun dailyUsageDao(): DailyUsageDao
     abstract fun appSettingsDao(): AppSettingsDao
     abstract fun activityLogDao(): ActivityLogDao
+    abstract fun managedAppRuleDao(): ManagedAppRuleDao
 
     companion object {
         @Volatile

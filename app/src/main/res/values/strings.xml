@@ -1,5 +1,95 @@
 <resources>
     <string name="app_name">Vlast</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Dashboard</string>
+    <string name="nav_reports">Reports</string>
+    <string name="nav_hotspot">Hotspot</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Dashboard & Cards -->
+    <string name="remaining_title">Remaining</string>
+    <string name="used_title">Used</string>
+    <string name="daily_limit">Daily Limit</string>
+    <string name="no_limit">Unlimited</string>
+    <string name="wifi_label">Wi-Fi</string>
+    <string name="mobile_label">Mobile Data</string>
+    <string name="sim1_label">SIM 1</string>
+    <string name="sim2_label">SIM 2</string>
+    <string name="kill_switch_title">Manual Kill Switch</string>
+    <string name="kill_switch_desc">Instant emergency cutoff for all network traffic</string>
+    <string name="recurring_limit_title">Recurring Daily Limit</string>
+    <string name="recurring_limit_desc">Renews automatically every night at midnight</string>
+    <string name="today_override_title">Today Temporary Limit</string>
+    <string name="today_override_desc">Valid today only, resets at midnight</string>
+    <string name="edit_limit">Edit</string>
+    <string name="set_limit">Set</string>
+    <string name="cancel_limit_long_press">Clear (Hold)</string>
+    <string name="active_status">Active</string>
+    <string name="inactive_status">Off</string>
+    <string name="resume_data">Resume Data</string>
+    <string name="cut_all_now">Cut All Now</string>
+
+    <!-- Reports -->
+    <string name="tab_activity_logs">Activity Log</string>
+    <string name="tab_historical_charts">Historical Charts</string>
+    <string name="reports_title">Activity &amp; Disconnection Log</string>
+    <string name="reports_subtitle">Official audit trail of cutoff and restored events with explicit reasons</string>
+    <string name="filter_all">All</string>
+    <string name="filter_cut">Cutoff</string>
+    <string name="filter_restored">Restored</string>
+    <string name="filter_system">System</string>
+    <string name="history_7_days">Last 7 Days</string>
+    <string name="history_30_days">Last 30 Days</string>
+    <string name="history_total_wifi">Total Wi-Fi</string>
+    <string name="history_total_mobile">Total Mobile</string>
+    <string name="history_total_period">Total Period</string>
+    <string name="history_date">Date</string>
+    <string name="history_no_data">No historical usage records found yet.</string>
+
+    <!-- Hotspot -->
+    <string name="hotspot_title">Hotspot Monitor</string>
+    <string name="hotspot_notice">Per Vlast specifications: Hotspot is measured accurately and independently without cutting connection to connected devices.</string>
+    <string name="hotspot_hero_title">Hotspot Consumption Today</string>
+    <string name="hotspot_refresh_btn">Refresh Hotspot Measurement</string>
+    <string name="hotspot_alert_title">Hotspot Alert Threshold</string>
+    <string name="hotspot_alert_desc">Receive notifications when threshold is reached, without cutting traffic</string>
+
+    <!-- Settings -->
+    <string name="settings_title">General Settings</string>
+    <string name="appearance_dark_mode">Dark Mode</string>
+    <string name="appearance_dark_desc">High-contrast authoritative dark mode</string>
+    <string name="sound_alert_title">Cutoff Sound Alert</string>
+    <string name="sound_alert_desc">Plays an authoritative tone at the moment of cutoff</string>
+    <string name="color_blind_title">Color-blind Accessible Mode</string>
+    <string name="color_blind_desc">High-contrast palette with explicit visual symbols (✓ ! ✕)</string>
+    <string name="language_title">App Language</string>
+    <string name="language_desc">Switch between Arabic and English</string>
+    <string name="pin_lock_title">Settings PIN Lock</string>
+    <string name="pin_lock_desc">Require PIN to modify limits or settings</string>
+    <string name="dual_sim_title">Dual SIM Selection</string>
+    <string name="dual_sim_desc">Select active SIM card to track and control</string>
+    <string name="read_phone_permission_title">Dual SIM Permission</string>
+    <string name="read_phone_permission_desc">Phone state permission needed to read exact carrier names</string>
+    <string name="grant_permission_btn">Grant Permission</string>
+    <string name="vpn_key_info_title">Why does the Key icon appear in the status bar?</string>
+    <string name="vpn_key_info_desc">Android requires the key icon for any local VpnService. Vlast operates 100% locally without external servers.</string>
+    <string name="about_vlast_title">Vlast</string>
+    <string name="about_vlast_tagline">Sovereign Authority &amp; Total Control</string>
+    <string name="about_vlast_desc">The word Vlast signifies decisive authority and rule. This system gives you sovereign mastery over your data bundles.</string>
+    <string name="pin_prompt_title">Security PIN</string>
+    <string name="pin_prompt_desc">Enter 4-digit PIN to access settings</string>
+    <string name="pin_error">Incorrect PIN. Please try again.</string>
+    <string name="unlock_btn">Unlock</string>
+    <string name="cancel_btn">Cancel</string>
+
+    <!-- Shortcuts -->
+    <string name="shortcut_kill_switch_short">Kill Switch</string>
+    <string name="shortcut_kill_switch_long">Toggle Emergency Kill Switch</string>
+    <string name="shortcut_remaining_short">Remaining</string>
+    <string name="shortcut_remaining_long">View Remaining Bandwidth</string>
+
+    <!-- Widgets -->
     <string name="widget_title">Vlast Data</string>
     <string name="widget_wifi">Wi-Fi</string>
     <string name="widget_mobile">Mobile</string>

@@ -52,19 +52,16 @@ fun HeroRemainingDisplay(
     effectiveLimitBytes: Long?,
     status: MeterProgressStatus,
     onCopyValue: (String, String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isColorBlindMode: Boolean = false
 ) {
-    val progressColor = when (status) {
-        MeterProgressStatus.GREEN -> VlastTokens.SemanticGreen
-        MeterProgressStatus.YELLOW -> VlastTokens.SemanticYellow
-        MeterProgressStatus.RED -> VlastTokens.SemanticRed
-    }
+    val progressColor = status.getColor(isColorBlindMode, isDarkMode = true)
 
-    // Color-blind friendly companion icon & pattern descriptor (Item 5)
+    // Color-blind friendly companion icon & pattern descriptor (Item 5 & Section 8)
     val (statusIcon, statusShapeLabel) = when (status) {
-        MeterProgressStatus.GREEN -> Pair(Icons.Filled.CheckCircle, "● آمن (أقل من 70%)")
-        MeterProgressStatus.YELLOW -> Pair(Icons.Filled.Warning, "▲ تحذير (70% - 90%)")
-        MeterProgressStatus.RED -> Pair(Icons.Filled.Info, "■ حرج / قطع (أكثر من 90%)")
+        MeterProgressStatus.GREEN -> Pair(Icons.Filled.CheckCircle, "✓ [آمن] (أقل من 70%)")
+        MeterProgressStatus.YELLOW -> Pair(Icons.Filled.Warning, "! [تحذير] (70% - 90%)")
+        MeterProgressStatus.RED -> Pair(Icons.Filled.Info, "✕ [حرج / قطع] (أكثر من 90%)")
     }
 
     val remainingDisplay = if (remainingBytes != null) {

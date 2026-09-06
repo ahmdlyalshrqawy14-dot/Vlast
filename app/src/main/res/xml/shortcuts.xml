@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="toggle_kill_switch"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_kill_switch"
+        android:shortcutShortLabel="@string/shortcut_kill_switch_short"
+        android:shortcutLongLabel="@string/shortcut_kill_switch_long">
+        <intent
+            android:action="com.example.ACTION_SHORTCUT_KILL_SWITCH"
+            android:targetPackage="com.example"
+            android:targetClass="com.example.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="view_remaining"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_remaining"
+        android:shortcutShortLabel="@string/shortcut_remaining_short"
+        android:shortcutLongLabel="@string/shortcut_remaining_long">
+        <intent
+            android:action="com.example.ACTION_SHORTCUT_REMAINING"
+            android:targetPackage="com.example"
+            android:targetClass="com.example.MainActivity" />
+    </shortcut>
+</shortcuts>

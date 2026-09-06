@@ -59,7 +59,8 @@ fun DashboardScreen(
     onPerformUndo: () -> Unit,
     onCopyValue: (String, String) -> Unit,
     onNavigateToReports: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isColorBlindMode: Boolean = false
 ) {
     val remainingBytes = todayRecord.getRemainingBytes(activeNetwork, simSlot)
     val usedBytes = todayRecord.getUsedBytes(activeNetwork, simSlot)
@@ -130,7 +131,8 @@ fun DashboardScreen(
             usedBytes = usedBytes,
             effectiveLimitBytes = effectiveLimit,
             status = meterStatus,
-            onCopyValue = onCopyValue
+            onCopyValue = onCopyValue,
+            isColorBlindMode = isColorBlindMode
         )
 
         // 5. First-day Empty State if zero consumption (Item 21)

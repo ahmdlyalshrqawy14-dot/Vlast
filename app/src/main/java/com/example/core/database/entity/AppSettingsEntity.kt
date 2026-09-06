@@ -65,5 +65,13 @@ data class AppSettingsEntity(
 
     // First Run Walkthrough state (Items 5 & 14)
     @ColumnInfo(name = "first_run_completed")
-    val firstRunCompleted: Boolean = false
+    val firstRunCompleted: Boolean = false,
+
+    // Cutoff sound alert (Section 2)
+    @ColumnInfo(name = "sound_alert_enabled")
+    val soundAlertEnabled: Boolean = true,
+
+    // Color-blind support mode (Section 8)
+    @ColumnInfo(name = "color_blind_mode_enabled")
+    val colorBlindModeEnabled: Boolean = false
 )

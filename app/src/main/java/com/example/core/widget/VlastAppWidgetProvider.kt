@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.widget.RemoteViews
 import com.example.R
 import com.example.core.database.VlastDatabase
@@ -16,16 +17,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * Clean compact Home Screen Widget (Item 8):
- * Displays solely:
- * 1. Remaining Wi-Fi data
- * 2. Remaining Mobile data
- * 3. Kill Switch status (Active / Inactive)
+ * Clean compact Home Screen Widget (Item 8 & Section 9):
+ * Supports dynamic resizing:
+ * - < 180dp: vlast_widget_small.xml
+ * - >= 180dp: vlast_app_widget_layout.xml
  */
 class VlastAppWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         updateWidgets(context, appWidgetManager, appWidgetIds)
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        updateWidgets(context, appWidgetManager, intArrayOf(appWidgetId))
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -57,10 +67,22 @@ class VlastAppWidgetProvider : AppWidgetProvider() {
                 val killSwitchText = if (isKillSwitch) "مفعل (نشط)" else "متوقف"
 
                 for (widgetId in appWidgetIds) {
-                    val views = RemoteViews(context.packageName, R.layout.vlast_app_widget_layout).apply {
-                        setTextViewText(R.id.widget_wifi_remaining_text, wifiText)
-                        setTextViewText(R.id.widget_mobile_remaining_text, mobileText)
-                        setTextViewText(R.id.widget_kill_switch_status_text, killSwitchText)
+                    val options = appWidgetManager.getAppWidgetOptions(widgetId)
+                    val minWidth = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH) ?: 200
+
+                    val views = if (minWidth < 180) {
+                        RemoteViews(context.packageName, R.layout.vlast_widget_small).apply {
+                            val primaryRemaining = if (mobileRemaining != null) mobileText else wifiText
+                            setTextViewText(R.id.widget_small_remaining_value, primaryRemaining)
+                            val statusText = if (isKillSwitch) "مفعل (قطع)" else if (mobileRemaining != null) "موبايل متبقي" else "واي فاي متبقي"
+                            setTextViewText(R.id.widget_small_status_text, statusText)
+                        }
+                    } else {
+                        RemoteViews(context.packageName, R.layout.vlast_app_widget_layout).apply {
+                            setTextViewText(R.id.widget_wifi_remaining_text, wifiText)
+                            setTextViewText(R.id.widget_mobile_remaining_text, mobileText)
+                            setTextViewText(R.id.widget_kill_switch_status_text, killSwitchText)
+                        }
                     }
                     appWidgetManager.updateAppWidget(widgetId, views)
                 }

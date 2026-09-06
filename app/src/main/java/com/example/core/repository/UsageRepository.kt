@@ -3,16 +3,20 @@ package com.example.core.repository
 import com.example.core.database.dao.ActivityLogDao
 import com.example.core.database.dao.AppSettingsDao
 import com.example.core.database.dao.DailyUsageDao
+import com.example.core.database.dao.ManagedAppRuleDao
 import com.example.core.database.entity.ActivityLogEntity
 import com.example.core.database.entity.AppSettingsEntity
 import com.example.core.database.entity.DailyUsageEntity
+import com.example.core.database.entity.ManagedAppRuleEntity
 import com.example.core.model.ActivityLogEntry
 import com.example.core.model.DailyUsageRecord
+import com.example.core.model.ManagedAppRule
 import com.example.core.model.NetworkType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -25,6 +29,7 @@ class UsageRepository(
     private val dailyUsageDao: DailyUsageDao,
     private val appSettingsDao: AppSettingsDao,
     private val activityLogDao: ActivityLogDao? = null,
+    private val managedAppRuleDao: ManagedAppRuleDao? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val mutex = Mutex()
@@ -365,11 +370,138 @@ class UsageRepository(
         }
     }
 
+    suspend fun setSoundAlertEnabled(enabled: Boolean) = withContext(ioDispatcher) {
+        mutex.withLock {
+            val currentSettings = appSettingsDao.getSettingsSync() ?: AppSettingsEntity()
+            appSettingsDao.saveSettings(currentSettings.copy(soundAlertEnabled = enabled))
+        }
+    }
+
+    suspend fun setColorBlindModeEnabled(enabled: Boolean) = withContext(ioDispatcher) {
+        mutex.withLock {
+            val currentSettings = appSettingsDao.getSettingsSync() ?: AppSettingsEntity()
+            appSettingsDao.saveSettings(currentSettings.copy(colorBlindModeEnabled = enabled))
+        }
+    }
+
     suspend fun setMonitoringActive(active: Boolean) = withContext(ioDispatcher) {
         mutex.withLock {
             val currentSettings = appSettingsDao.getSettingsSync() ?: AppSettingsEntity()
             appSettingsDao.saveSettings(currentSettings.copy(isMonitoringActive = active))
         }
+    }
+
+    // =========================================================================
+    // Phase 4: Per-App Control Methods (Sections 2 & 5)
+    // =========================================================================
+
+    fun observeAllAppRules(): Flow<List<ManagedAppRule>> {
+        val today = getTodayDateString()
+        return (managedAppRuleDao?.getAllRules() ?: flowOf(emptyList())).map { list ->
+            list.map { entity ->
+                val rule = ManagedAppRule.fromEntity(entity)
+                if (rule.lastResetDate != today) rule.copy(usedBytesToday = 0L, lastResetDate = today) else rule
+            }
+        }.distinctUntilChanged().flowOn(ioDispatcher)
+    }
+
+    suspend fun getAllAppRulesSync(): List<ManagedAppRule> = withContext(ioDispatcher) {
+        val today = getTodayDateString()
+        managedAppRuleDao?.resetDailyBytesIfNeeded(today)
+        managedAppRuleDao?.getAllRulesSync()?.map { ManagedAppRule.fromEntity(it) } ?: emptyList()
+    }
+
+    suspend fun getAppRuleSync(packageName: String): ManagedAppRule? = withContext(ioDispatcher) {
+        val today = getTodayDateString()
+        val entity = managedAppRuleDao?.getRuleSync(packageName) ?: return@withContext null
+        val rule = ManagedAppRule.fromEntity(entity)
+        if (rule.lastResetDate != today) {
+            rule.copy(usedBytesToday = 0L, lastResetDate = today)
+        } else {
+            rule
+        }
+    }
+
+    suspend fun setAppFullyBlocked(packageName: String, appDisplayName: String, isBlocked: Boolean) = withContext(ioDispatcher) {
+        mutex.withLock {
+            val today = getTodayDateString()
+            val existing = managedAppRuleDao?.getRuleSync(packageName)
+            if (existing != null) {
+                managedAppRuleDao.updateBlockedStatus(packageName, isBlocked)
+            } else {
+                managedAppRuleDao?.insertOrUpdate(
+                    ManagedAppRuleEntity(
+                        packageName = packageName,
+                        appDisplayName = appDisplayName,
+                        isFullyBlocked = isBlocked,
+                        lastResetDate = today
+                    )
+                )
+            }
+
+            // Section 5: Log to Activity Log
+            if (isBlocked) {
+                logActivity(
+                    eventType = ActivityLogEntry.EventType.DISCONNECTED,
+                    reason = ActivityLogEntry.SpecificCutReason.APP_FULLY_BLOCKED,
+                    description = "تم حظر $appDisplayName بالكامل من الإنترنت.",
+                    details = packageName
+                )
+            } else {
+                logActivity(
+                    eventType = ActivityLogEntry.EventType.RESTORED,
+                    reason = ActivityLogEntry.SpecificCutReason.APP_UNBLOCKED,
+                    description = "تم إلغاء حظر $appDisplayName واستعادة اتصاله بالإنترنت.",
+                    details = packageName
+                )
+            }
+        }
+    }
+
+    suspend fun setAppDailyLimit(
+        packageName: String,
+        appDisplayName: String,
+        limitBytes: Long?,
+        enabled: Boolean
+    ) = withContext(ioDispatcher) {
+        mutex.withLock {
+            val today = getTodayDateString()
+            val existing = managedAppRuleDao?.getRuleSync(packageName)
+            if (existing != null) {
+                managedAppRuleDao.updateLimit(packageName, limitBytes, enabled)
+            } else {
+                managedAppRuleDao?.insertOrUpdate(
+                    ManagedAppRuleEntity(
+                        packageName = packageName,
+                        appDisplayName = appDisplayName,
+                        dailyLimitBytes = limitBytes,
+                        dailyLimitEnabled = enabled,
+                        lastResetDate = today
+                    )
+                )
+            }
+
+            // Section 5: Log to Activity Log
+            val limitStr = if (limitBytes != null) com.example.core.model.SmartUnitFormatter.formatDisplay(limitBytes) else "بدون حد"
+            logActivity(
+                eventType = ActivityLogEntry.EventType.CONFIG_CHANGED,
+                reason = ActivityLogEntry.SpecificCutReason.LIMIT_EXPANDED,
+                description = if (enabled) "تم تفعيل حد يومي ($limitStr) لتطبيق $appDisplayName." else "تم تعطيل الحد اليومي لتطبيق $appDisplayName.",
+                details = packageName
+            )
+        }
+    }
+
+    suspend fun deleteAppRule(packageName: String) = withContext(ioDispatcher) {
+        mutex.withLock {
+            managedAppRuleDao?.deleteRule(packageName)
+        }
+    }
+
+    suspend fun recordAppBytes(packageName: String, bytes: Long): ManagedAppRule? = withContext(ioDispatcher) {
+        val today = getTodayDateString()
+        managedAppRuleDao?.addAppUsageBytes(packageName, bytes, today)
+        managedAppRuleDao?.getRuleSync(packageName)?.let { ManagedAppRule.fromEntity(it) }
     }
 
     private fun createInitialRecordForDate(date: String): DailyUsageRecord {

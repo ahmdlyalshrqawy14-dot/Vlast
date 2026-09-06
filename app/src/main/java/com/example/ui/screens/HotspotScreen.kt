@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Button
@@ -39,7 +40,7 @@ import com.example.ui.theme.VlastTokens
 /**
  * Screen 3: Hotspot Monitor & Alert (Phase 1 & Phase 3):
  * Strictly measures hotspot consumption without cutting connection,
- * providing alert threshold controls.
+ * providing alert threshold controls and manual refresh.
  */
 @Composable
 fun HotspotScreen(
@@ -48,6 +49,7 @@ fun HotspotScreen(
     isAlertEnabled: Boolean,
     onConfigureThreshold: () -> Unit,
     onToggleAlert: (Boolean) -> Unit,
+    onManualRefresh: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val hotspotFormatted = SmartUnitFormatter.format(hotspotUsedBytes)
@@ -148,6 +150,23 @@ fun HotspotScreen(
                             modifier = Modifier.padding(bottom = 6.dp)
                         )
                     }
+                }
+
+                OutlinedButton(
+                    onClick = onManualRefresh,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = VlastTokens.BrandAmber),
+                    modifier = Modifier.padding(top = VlastTokens.Space8)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "تحديث",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = " تحديث قياس الهوت سبوت الآن",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

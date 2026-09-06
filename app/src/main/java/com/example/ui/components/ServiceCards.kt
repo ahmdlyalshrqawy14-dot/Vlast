@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
@@ -29,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -265,12 +269,29 @@ fun TodayOverrideCard(
                 horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
             ) {
                 if (isActive) {
-                    OutlinedButton(
-                        onClick = onClearTodayLimit,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = VlastTokens.SemanticRed)
+                    val haptic = LocalHapticFeedback.current
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                            .background(VlastTokens.SemanticRed.copy(alpha = 0.12f))
+                            .border(1.dp, VlastTokens.SemanticRed.copy(alpha = 0.5f), RoundedCornerShape(VlastTokens.RadiusSmall))
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onClearTodayLimit()
+                                    }
+                                )
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Filled.Close, contentDescription = "إلغاء", modifier = Modifier.size(14.dp))
-                        Text(" إلغاء", fontSize = 12.sp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(Icons.Filled.Close, contentDescription = "إلغاء", tint = VlastTokens.SemanticRed, modifier = Modifier.size(14.dp))
+                            Text("إلغاء (ضغط مطول)", color = VlastTokens.SemanticRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 

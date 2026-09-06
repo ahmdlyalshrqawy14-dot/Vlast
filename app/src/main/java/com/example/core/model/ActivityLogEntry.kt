@@ -32,6 +32,9 @@ data class ActivityLogEntry(
         MOBILE_SIM2_LIMIT("حد الشريحة الثانية (SIM 2)", "Mobile SIM 2 Limit"),
         AIRPLANE_MODE("تفعيل وضع الطيران", "Airplane Mode Enabled"),
         CONNECTION_RESTORED("استعادة الاتصال", "Connection Restored"),
-        LIMIT_EXPANDED("زيادة الحد واستئناف البيانات", "Limit Expanded & Resumed")
+        LIMIT_EXPANDED("زيادة الحد واستئناف البيانات", "Limit Expanded & Resumed"),
+        APP_FULLY_BLOCKED("حظر التطبيق بالكامل", "App Fully Blocked"),
+        APP_LIMIT_EXCEEDED("تجاوز حد التطبيق المخصص", "App Limit Exceeded"),
+        APP_UNBLOCKED("إلغاء حظر التطبيق", "App Unblocked")
     }
 }

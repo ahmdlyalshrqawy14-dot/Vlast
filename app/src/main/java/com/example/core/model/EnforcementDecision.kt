@@ -22,6 +22,24 @@ sealed class EnforcementDecision {
     ) : EnforcementDecision()
 
     /**
+     * Section 3 (Priority 2): Application is individually fully blocked.
+     */
+    data class BlockedAppFull(
+        val packageName: String,
+        val appName: String
+    ) : EnforcementDecision()
+
+    /**
+     * Section 3 (Priority 4): Application exceeded its dedicated daily quota.
+     */
+    data class BlockedAppLimitExceeded(
+        val packageName: String,
+        val appName: String,
+        val usedBytes: Long,
+        val limitBytes: Long
+    ) : EnforcementDecision()
+
+    /**
      * Data passage authorized.
      */
     data class Allowed(
