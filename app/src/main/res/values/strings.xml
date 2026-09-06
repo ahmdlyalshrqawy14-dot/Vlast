@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Vlast</string>
+    <string name="widget_title">Vlast Data</string>
+    <string name="widget_wifi">Wi-Fi</string>
+    <string name="widget_mobile">Mobile</string>
+    <string name="widget_kill_switch">Kill Switch</string>
+    <string name="widget_active">Active</string>
+    <string name="widget_inactive">Off</string>
+    <string name="widget_unlimited">∞</string>
+</resources>

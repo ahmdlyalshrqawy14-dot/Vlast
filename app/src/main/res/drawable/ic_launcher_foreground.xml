@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Centered within 66dp safe zone (canvas 108dp) -->
+    <!-- Shield shape representing enforcement and protection -->
+    <path
+        android:pathData="M54,24 L74,32 C74,52 64,68 54,76 C44,68 34,52 34,32 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="34"
+                android:startY="24"
+                android:endX="74"
+                android:endY="76"
+                android:type="linear">
+                <item android:color="#38BDF8" android:offset="0.0" />
+                <item android:color="#2563EB" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Inner Lock & Lightning/Pulse Accent -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,39 C51.24,39 49,41.24 49,44 L49,47 C47.9,47 47,47.9 47,49 L47,59 C47,60.1 47.9,61 49,61 L59,61 C60.1,61 61,60.1 61,59 L61,49 C61,47.9 60.1,47 59,47 L59,44 C59,41.24 56.76,39 54,39 Z M57,47 L51,47 L51,44 C51,42.34 52.34,41 54,41 C55.66,41 57,42.34 57,44 L57,47 Z" />
+    <!-- Center Keyhole dot -->
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M54,52 C52.9,52 52,52.9 52,54 C52,54.8 52.6,55.5 53.3,55.8 L53,58 L55,58 L54.7,55.8 C55.4,55.5 56,54.8 56,54 C56,52.9 55.1,52 54,52 Z" />
+    <!-- Data pulse wings -->
+    <path
+        android:strokeColor="#67E8F9"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M27,45 C27,45 30,42 34,44 M81,45 C81,45 78,42 74,44" />
+</vector>

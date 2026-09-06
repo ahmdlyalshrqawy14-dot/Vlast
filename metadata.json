@@ -1,0 +1,6 @@
+{
+  "name": "Vlast",
+  "description": "Bandwidth limit and hotspot data monitoring with VPN-based network enforcement",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
