@@ -23,20 +23,17 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
+          gradle-version: '9.3.1'
 
-      # إنشاء ملف settings.gradle.kts تلقائياً إذا كان مفقوداً في المجلد الرئيسي
       - name: Ensure settings.gradle.kts exists
         run: |
           if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
             echo 'include(":app")' > settings.gradle.kts
           fi
 
-      # بناء الـ APK باستخدام Gradle مباشرة دون الحاجة لملف gradlew
       - name: Build Debug APK
         run: gradle :app:assembleDebug
 
-      # رفع ملف الـ APK النهائي لتنزيله مباشرة من GitHub Actions
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
