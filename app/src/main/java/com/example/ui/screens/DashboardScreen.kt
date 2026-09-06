@@ -21,6 +21,7 @@ import com.example.core.model.NetworkType
 import com.example.core.model.ServicePriorityStatus
 import com.example.core.model.SmartUnitFormatter
 import com.example.core.viewmodel.VlastMechanicsViewModel
+import com.example.ui.components.AppControlDashboardCard
 import com.example.ui.components.CutoffActiveBanner
 import com.example.ui.components.DynamicIslandHeader
 import com.example.ui.components.FirstDayEmptyStateCard
@@ -59,6 +60,8 @@ fun DashboardScreen(
     onPerformUndo: () -> Unit,
     onCopyValue: (String, String) -> Unit,
     onNavigateToReports: () -> Unit,
+    onNavigateToAppControl: () -> Unit = {},
+    activeAppRulesCount: Int = 0,
     modifier: Modifier = Modifier,
     isColorBlindMode: Boolean = false
 ) {
@@ -165,6 +168,12 @@ fun DashboardScreen(
         KillSwitchCard(
             isActive = isKillSwitchActive,
             onToggle = { onToggleKillSwitch() }
+        )
+
+        // 8. Per-App Control Card on Dashboard (Item 4)
+        AppControlDashboardCard(
+            activeRulesCount = activeAppRulesCount,
+            onNavigateToAppControl = onNavigateToAppControl
         )
 
         Spacer(modifier = Modifier.height(16.dp))

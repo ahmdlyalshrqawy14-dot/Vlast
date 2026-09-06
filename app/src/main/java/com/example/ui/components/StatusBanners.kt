@@ -266,6 +266,10 @@ fun VlastConfirmationDialog(
             "تأكيد حظر تطبيق ${request.appName}",
             "أنت على وشك حظر ${request.appName} بالكامل من استخدام الإنترنت (Wi-Fi وبيانات الهاتف). لن يتمكن التطبيق من إرسال أو استقبال أي بيانات. هل تريد المتابعة؟"
         )
+        is VlastMechanicsViewModel.ConfirmationRequest.DisableAppBlock -> Pair(
+            "تأكيد إلغاء حظر تطبيق ${request.appName}",
+            "أنت على وشك إلغاء الحظر الكامل عن تطبيق ${request.appName} والسماح له باتصال الإنترنت مجدداً. هل تريد المتابعة؟"
+        )
     }
 
     AlertDialog(

@@ -55,6 +55,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.R
 import com.example.core.sim.DualSimManager
+import androidx.compose.material.icons.filled.Shop
+import androidx.compose.material.icons.filled.Storefront
+import com.example.ui.components.AboutVlastVisualCard
 import com.example.ui.theme.NumberFontFamily
 import com.example.ui.theme.VlastTokens
 
@@ -87,6 +90,7 @@ fun SettingsScreen(
     currentLanguage: String = "ar",
     onSelectLanguage: (String) -> Unit = {},
     onNavigateToAppControl: () -> Unit = {},
+    onNavigateToStorePreview: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -393,43 +397,65 @@ fun SettingsScreen(
             }
         }
 
-        // Sovereign "About Vlast" (Items 18 & 24)
+        // Item 32: Google Play Store Preview Showcase Entrance
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(VlastTokens.RadiusLarge))
+                .clip(RoundedCornerShape(VlastTokens.RadiusMedium))
                 .background(VlastTokens.DarkSurface)
-                .border(1.dp, VlastTokens.BrandRedDark, RoundedCornerShape(VlastTokens.RadiusLarge))
-                .padding(VlastTokens.Space20)
+                .border(1.dp, VlastTokens.BrandAmber.copy(alpha = 0.5f), RoundedCornerShape(VlastTokens.RadiusMedium))
+                .clickable(onClick = onNavigateToStorePreview)
+                .padding(VlastTokens.Space16)
         ) {
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = stringResource(R.string.about_vlast_title),
-                    fontFamily = NumberFontFamily,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = VlastTokens.BrandRed
-                )
-                Text(
-                    text = stringResource(R.string.about_vlast_tagline),
-                    color = VlastTokens.BrandAmber,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = stringResource(R.string.about_vlast_desc),
-                    color = VlastTokens.TextSecondary,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 16.sp,
-                    modifier = Modifier.padding(horizontal = VlastTokens.Space8)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space12),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(VlastTokens.BrandAmber.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Storefront,
+                            contentDescription = null,
+                            tint = VlastTokens.BrandAmber,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "معاينة تصاميم متجر Google Play",
+                            color = VlastTokens.TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "استعراض البانر التعريفي ولقطات الشاشة المصممة بهوية Vlast الرسمية",
+                            color = VlastTokens.TextMuted,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = VlastTokens.BrandAmber,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
+
+        // Sovereign "About Vlast" (Items 18 & 24)
+        AboutVlastVisualCard()
     }
 }
 

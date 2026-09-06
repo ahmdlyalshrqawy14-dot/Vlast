@@ -30,12 +30,27 @@ class MainActivity : AppCompatActivity() {
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             startVlastVpnService()
+        } else {
+            // Item 22: Trigger branded VPN permission denied error dialog
+            viewModel.triggerVpnErrorDialog(true)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Section 5: Official Android 12+ Splash Screen
-        installSplashScreen()
+        // Item 20: Official Android 12+ Splash Screen with calculated exit scale & fade animation
+        val splashScreen = installSplashScreen()
+        splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
+            val iconView = splashScreenViewProvider.iconView
+            iconView.animate()
+                .scaleX(1.15f)
+                .scaleY(1.15f)
+                .alpha(0f)
+                .setDuration(450L)
+                .withEndAction {
+                    splashScreenViewProvider.remove()
+                }
+                .start()
+        }
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -75,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkAndStartVpn() {
+    fun checkAndStartVpn() {
         val prepareIntent = VpnService.prepare(this)
         if (prepareIntent != null) {
             vpnPermissionLauncher.launch(prepareIntent)

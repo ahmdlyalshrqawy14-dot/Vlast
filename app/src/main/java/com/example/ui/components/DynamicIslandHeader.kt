@@ -8,6 +8,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -129,7 +133,8 @@ fun DynamicIslandHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
             ) {
-                // Button 1: Kill Switch Toggle (High urgency)
+                // Button 1: Kill Switch Toggle (High urgency - Item 12: Long press to activate)
+                val haptic = LocalHapticFeedback.current
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -140,12 +145,28 @@ fun DynamicIslandHeader(
                             if (isKillSwitchActive) VlastTokens.BrandRedDark else VlastTokens.DarkBorder,
                             RoundedCornerShape(VlastTokens.RadiusSmall)
                         )
-                        .clickable { onToggleKillSwitch() },
+                        .then(
+                            if (isKillSwitchActive) {
+                                Modifier.clickable { onToggleKillSwitch() }
+                            } else {
+                                Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            onToggleKillSwitch()
+                                        },
+                                        onTap = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        }
+                                    )
+                                }
+                            }
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Block,
-                        contentDescription = "القطع الكامل",
+                        contentDescription = "القطع الكامل (اضغط مطولاً للتفعيل)",
                         tint = if (isKillSwitchActive) Color.White else VlastTokens.BrandRed,
                         modifier = Modifier.size(20.dp)
                     )

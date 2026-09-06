@@ -25,6 +25,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -319,6 +323,9 @@ fun KillSwitchCard(
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+    var showLongPressHint by remember { mutableStateOf(false) }
+
     ServiceCardContainer(
         title = "القطع الكامل اليدوي",
         subtitle = "حظر فوري وشامل لجميع البيانات (أعلى أولوية لا تلغى تلقائيًا)",
@@ -335,34 +342,96 @@ fun KillSwitchCard(
                 text = if (isActive)
                     "⚠️ القطع الكامل نشط: جميع حركات الإنترنت على Wi-Fi وبيانات الهاتف محظورة تمامًا."
                 else
-                    "اضغط لتفعيل القطع الكامل الفوري عند الطوارئ.",
+                    "لحماية اتصالك، يتطلب تفعيل القطع الكامل ضغطة مطوّلة منعاً للمس بالخطأ.",
                 color = if (isActive) VlastTokens.SemanticRed else VlastTokens.TextMuted,
                 fontSize = 12.sp,
                 lineHeight = 16.sp
             )
 
-            Button(
-                onClick = { onToggle(!isActive) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isActive) VlastTokens.SemanticGreen else VlastTokens.BrandRed,
-                    contentColor = Color.White
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
+            if (!isActive && showLongPressHint) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                        .background(VlastTokens.BrandRed.copy(alpha = 0.15f))
+                        .border(1.dp, VlastTokens.BrandRed.copy(alpha = 0.4f), RoundedCornerShape(VlastTokens.RadiusSmall))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isActive) Icons.Filled.Check else Icons.Filled.Block,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
                     Text(
-                        text = if (isActive) "استئناف الاتصال والإنترنت الآن" else "تفعيل القطع الكامل الفوري",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        text = "⚠️ يتطلب تفعيل القطع الكامل ضغطة مطوّلة مستمرة لمنع التفعيل غير المقصود.",
+                        color = VlastTokens.SemanticRed,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
                     )
+                }
+            }
+
+            if (isActive) {
+                // Deactivation / Restoring does not require long press or confirmation (Item 7)
+                Button(
+                    onClick = { onToggle(false) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = VlastTokens.SemanticGreen,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "استئناف الاتصال والإنترنت الآن",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            } else {
+                // Item 12: Activating Kill Switch requires a long press to prevent accidental touch
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(VlastTokens.RadiusMedium))
+                        .background(VlastTokens.BrandRed)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showLongPressHint = false
+                                    onToggle(true)
+                                },
+                                onTap = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    showLongPressHint = true
+                                }
+                            )
+                        }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(VlastTokens.Space8)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Block,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "تفعيل القطع الكامل (اضغط مطوّلاً)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

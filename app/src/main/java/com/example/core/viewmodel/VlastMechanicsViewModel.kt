@@ -118,6 +118,10 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
             val packageName: String,
             val appName: String
         ) : ConfirmationRequest()
+        data class DisableAppBlock(
+            val packageName: String,
+            val appName: String
+        ) : ConfirmationRequest()
     }
 
     private val _activeConfirmation = MutableStateFlow<ConfirmationRequest?>(null)
@@ -126,6 +130,22 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
     // Clipboard copy feedback message (Item 21)
     private val _copyMessage = MutableStateFlow<String?>(null)
     val copyMessage: StateFlow<String?> = _copyMessage.asStateFlow()
+
+    // Item 22: Branded VPN Error Dialog State
+    private val _showVpnErrorDialog = MutableStateFlow<Boolean>(false)
+    val showVpnErrorDialog: StateFlow<Boolean> = _showVpnErrorDialog.asStateFlow()
+
+    fun triggerVpnErrorDialog(show: Boolean) {
+        _showVpnErrorDialog.value = show
+    }
+
+    // Item 28: Kill Switch Signature Moment State
+    private val _showKillSwitchSignatureMoment = MutableStateFlow<Boolean>(false)
+    val showKillSwitchSignatureMoment: StateFlow<Boolean> = _showKillSwitchSignatureMoment.asStateFlow()
+
+    fun dismissKillSwitchSignatureMoment() {
+        _showKillSwitchSignatureMoment.value = false
+    }
 
     // Settings screen PIN lock authenticated state (Item 16)
     private val _isSettingsUnlocked = MutableStateFlow(false)
@@ -224,6 +244,9 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
             is ConfirmationRequest.EnableAppBlock -> {
                 setAppFullyBlocked(request.packageName, request.appName, true)
             }
+            is ConfirmationRequest.DisableAppBlock -> {
+                setAppFullyBlocked(request.packageName, request.appName, false)
+            }
             null -> {}
         }
     }
@@ -232,7 +255,7 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
         if (targetBlocked) {
             _activeConfirmation.value = ConfirmationRequest.EnableAppBlock(packageName, appName)
         } else {
-            setAppFullyBlocked(packageName, appName, false)
+            _activeConfirmation.value = ConfirmationRequest.DisableAppBlock(packageName, appName)
         }
     }
 
@@ -244,6 +267,9 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             if (!repository.canToggleTunnel()) return@launch // Debounce protection (Item 18)
             repository.setKillSwitch(active)
+            if (active) {
+                _showKillSwitchSignatureMoment.value = true
+            }
             ensureVpnServiceRunning()
         }
     }
@@ -463,12 +489,41 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
     fun setAppFullyBlocked(packageName: String, appDisplayName: String, isBlocked: Boolean) {
         viewModelScope.launch {
             repository.setAppFullyBlocked(packageName, appDisplayName, isBlocked)
+            if (isBlocked) {
+                com.example.core.notification.AppControlNotificationHelper.notifyAppFullyBlocked(
+                    getApplication(),
+                    appDisplayName,
+                    packageName
+                )
+            } else {
+                com.example.core.notification.AppControlNotificationHelper.notifyAppUnblocked(
+                    getApplication(),
+                    appDisplayName,
+                    packageName
+                )
+            }
         }
     }
 
     fun setAppDailyLimit(packageName: String, appDisplayName: String, limitBytes: Long?, enabled: Boolean) {
         viewModelScope.launch {
             repository.setAppDailyLimit(packageName, appDisplayName, limitBytes, enabled)
+            if (enabled && limitBytes != null && limitBytes > 0L) {
+                val limitStr = SmartUnitFormatter.formatDisplay(limitBytes)
+                com.example.core.notification.AppControlNotificationHelper.notifyAppLimitUpdated(
+                    getApplication(),
+                    appDisplayName,
+                    packageName,
+                    limitStr
+                )
+            } else {
+                com.example.core.notification.AppControlNotificationHelper.notifyAppLimitUpdated(
+                    getApplication(),
+                    appDisplayName,
+                    packageName,
+                    null
+                )
+            }
         }
     }
 

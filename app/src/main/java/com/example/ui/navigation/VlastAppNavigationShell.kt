@@ -73,9 +73,12 @@ import com.example.core.sim.DualSimManager
 import com.example.core.viewmodel.VlastMechanicsViewModel
 import com.example.ui.components.VlastConfirmationDialog
 import com.example.ui.dialogs.LimitInputDialog
+import com.example.ui.dialogs.KillSwitchSignatureMomentDialog
+import com.example.ui.dialogs.VlastBrandedErrorDialog
 import com.example.ui.screens.AppControlScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.HotspotScreen
+import com.example.ui.screens.PlayStorePreviewScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.VlastTheme
@@ -124,6 +127,10 @@ fun VlastAppNavigationShell(
     val historyRangeDays by viewModel.historyDays.collectAsState()
     val isSettingsUnlocked by viewModel.isSettingsUnlocked.collectAsState()
     val appRules by viewModel.appRules.collectAsState()
+    val showVpnErrorDialog by viewModel.showVpnErrorDialog.collectAsState()
+    val showKillSwitchSignatureMoment by viewModel.showKillSwitchSignatureMoment.collectAsState()
+
+    var isStorePreviewOpen by remember { mutableStateOf(false) }
 
     var availableSims by remember { mutableStateOf<List<DualSimManager.SimSlotInfo>>(emptyList()) }
     LaunchedEffect(Unit) {
@@ -222,7 +229,9 @@ fun VlastAppNavigationShell(
                                     .widthIn(max = 700.dp)
                                     .align(Alignment.Center)
                             ) {
-                                if (isAppControlOpen) {
+                                if (isStorePreviewOpen) {
+                                    PlayStorePreviewScreen(onBack = { isStorePreviewOpen = false })
+                                } else if (isAppControlOpen) {
                                     AppControlScreen(
                                         appRules = appRules,
                                         onRequestBlockToggle = { pkg, name, targetBlocked ->
@@ -266,7 +275,9 @@ fun VlastAppNavigationShell(
                                         },
                                         onNavigateToReports = { currentDestination = VlastNavDestination.REPORTS },
                                         onConfigureHotspot = { isEditingHotspotThreshold = true },
-                                        onNavigateToAppControl = { isAppControlOpen = true }
+                                        onNavigateToAppControl = { isAppControlOpen = true },
+                                        onNavigateToStorePreview = { isStorePreviewOpen = true },
+                                        appRules = appRules
                                     )
                                 }
                             }
@@ -312,7 +323,9 @@ fun VlastAppNavigationShell(
                                 .padding(innerPadding)
                                 .background(VlastTokens.DarkBackground)
                         ) {
-                            if (isAppControlOpen) {
+                            if (isStorePreviewOpen) {
+                                PlayStorePreviewScreen(onBack = { isStorePreviewOpen = false })
+                            } else if (isAppControlOpen) {
                                 AppControlScreen(
                                     appRules = appRules,
                                     onRequestBlockToggle = { pkg, name, targetBlocked ->
@@ -356,7 +369,9 @@ fun VlastAppNavigationShell(
                                     },
                                     onNavigateToReports = { currentDestination = VlastNavDestination.REPORTS },
                                     onConfigureHotspot = { isEditingHotspotThreshold = true },
-                                    onNavigateToAppControl = { isAppControlOpen = true }
+                                    onNavigateToAppControl = { isAppControlOpen = true },
+                                    onNavigateToStorePreview = { isStorePreviewOpen = true },
+                                    appRules = appRules
                                 )
                             }
                         }
@@ -546,6 +561,44 @@ fun VlastAppNavigationShell(
                         }
                     )
                 }
+
+                // Items 5 & 14: First Run Explanation Dialog
+                if (!settings.firstRunCompleted) {
+                    com.example.ui.dialogs.FirstRunExplanationDialog(
+                        onDismiss = {
+                            viewModel.completeFirstRun()
+                        }
+                    )
+                }
+
+                // Item 22: Branded VPN Error Dialog
+                if (showVpnErrorDialog) {
+                    val context = LocalContext.current
+                    VlastBrandedErrorDialog(
+                        title = "تأمين حماية Vlast المحلي",
+                        message = "يتطلب Vlast صلاحية إنشاء نفق فلترة شبكة محلي لحساب استهلاك الحزم وفرض حدود القطع تلقائياً دون إرسال أي بيانات لخوادم خارجية.",
+                        onRetry = {
+                            viewModel.triggerVpnErrorDialog(false)
+                            (context as? com.example.MainActivity)?.checkAndStartVpn()
+                        },
+                        onDismiss = {
+                            viewModel.triggerVpnErrorDialog(false)
+                        }
+                    )
+                }
+
+                // Item 28: Signature Moment Dialog for Emergency Kill Switch
+                if (showKillSwitchSignatureMoment) {
+                    KillSwitchSignatureMomentDialog(
+                        onAcknowledge = {
+                            viewModel.dismissKillSwitchSignatureMoment()
+                        },
+                        onUndo = {
+                            viewModel.dismissKillSwitchSignatureMoment()
+                            viewModel.requestKillSwitchToggle(false)
+                        }
+                    )
+                }
             }
         }
     }
@@ -573,7 +626,9 @@ private fun AppContent(
     onOpenSetTodayLimit: (NetworkType) -> Unit,
     onNavigateToReports: () -> Unit,
     onConfigureHotspot: () -> Unit,
-    onNavigateToAppControl: () -> Unit = {}
+    onNavigateToAppControl: () -> Unit = {},
+    onNavigateToStorePreview: () -> Unit = {},
+    appRules: List<com.example.core.model.ManagedAppRule> = emptyList()
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -614,7 +669,9 @@ private fun AppContent(
                 onCopyValue = { label, value ->
                     viewModel.copyToClipboard(label, value)
                 },
-                onNavigateToReports = onNavigateToReports
+                onNavigateToReports = onNavigateToReports,
+                onNavigateToAppControl = onNavigateToAppControl,
+                activeAppRulesCount = appRules.count { it.isFullyBlocked || (it.dailyLimitEnabled && (it.dailyLimitBytes ?: 0L) > 0L) }
             )
         }
         VlastNavDestination.REPORTS -> {
@@ -662,7 +719,8 @@ private fun AppContent(
                 onToggleColorBlindMode = { viewModel.toggleColorBlindMode(it) },
                 currentLanguage = currentLanguage,
                 onSelectLanguage = onLanguageChange,
-                onNavigateToAppControl = onNavigateToAppControl
+                onNavigateToAppControl = onNavigateToAppControl,
+                onNavigateToStorePreview = onNavigateToStorePreview
             )
         }
     }

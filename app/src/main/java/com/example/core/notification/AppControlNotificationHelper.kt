@@ -57,11 +57,17 @@ object AppControlNotificationHelper {
         sendNotification(context, APP_CUTOFF_CHANNEL_ID, packageName.hashCode() + 3000, title, message, NotificationCompat.PRIORITY_HIGH)
     }
 
-    fun notifyAppLimitUpdated(context: Context, appDisplayName: String, packageName: String, limitStr: String) {
+    fun notifyAppLimitUpdated(context: Context, appDisplayName: String, packageName: String, limitStr: String?) {
         ensureChannels(context)
-        val title = "تحديث حد التطبيق"
-        val message = "تم تفعيل حد يومي مخصص ($limitStr) لتطبيق $appDisplayName."
-        sendNotification(context, APP_INFO_CHANNEL_ID, packageName.hashCode() + 4000, title, message, NotificationCompat.PRIORITY_DEFAULT)
+        if (limitStr != null) {
+            val title = "تحديث حد التطبيق"
+            val message = "تم تفعيل/رفع الحد اليومي المخصص ($limitStr) لتطبيق $appDisplayName."
+            sendNotification(context, APP_INFO_CHANNEL_ID, packageName.hashCode() + 4000, title, message, NotificationCompat.PRIORITY_DEFAULT)
+        } else {
+            val title = "إلغاء حد التطبيق"
+            val message = "تم إلغاء الحد اليومي المخصص لتطبيق $appDisplayName واستعادة اتصاله."
+            sendNotification(context, APP_INFO_CHANNEL_ID, packageName.hashCode() + 4000, title, message, NotificationCompat.PRIORITY_DEFAULT)
+        }
     }
 
     private fun sendNotification(

@@ -3,6 +3,7 @@ package com.example.ui.dialogs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -61,6 +65,15 @@ fun LimitInputDialog(
 
     var textInput by remember { mutableStateOf(initialAmount) }
     var selectedUnit by remember { mutableStateOf(initialUnit) }
+    var showDecreaseHint by remember { mutableStateOf(false) }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    val parsedBytes = remember(textInput, selectedUnit) {
+        SmartUnitFormatter.parseInputToBytes(textInput, selectedUnit)
+    }
+    val isDecrease = remember(parsedBytes, initialBytes) {
+        parsedBytes != null && initialBytes != null && initialBytes > 0L && parsedBytes < initialBytes
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -97,8 +110,9 @@ fun LimitInputDialog(
                         value = textInput,
                         onValueChange = { newValue ->
                             // Strictly numbers and decimal point only (Item 20)
-                            if (newValue.all { it.isDigit() || it == '.' }) {
+                            if (newValue.all { it.isDigit() || it == '.' } && newValue.count { it == '.' } <= 1) {
                                 textInput = newValue
+                                showDecreaseHint = false
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -125,7 +139,10 @@ fun LimitInputDialog(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
                                     .background(if (isSelected) VlastTokens.BrandCyan else Color.Transparent)
-                                    .clickable { selectedUnit = unit }
+                                    .clickable {
+                                        selectedUnit = unit
+                                        showDecreaseHint = false
+                                    }
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 Text(
@@ -137,6 +154,29 @@ fun LimitInputDialog(
                                 )
                             }
                         }
+                    }
+                }
+
+                // Item 12 hint: If decreasing the limit, inform about long-press protection
+                if (isDecrease) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                            .background(VlastTokens.BrandAmber.copy(alpha = 0.12f))
+                            .border(1.dp, VlastTokens.BrandAmber.copy(alpha = 0.3f), RoundedCornerShape(VlastTokens.RadiusSmall))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = if (showDecreaseHint)
+                                "⚠️ اضغط مطولاً على الزر بالأسفل لتأكيد التخفيض منعاً للمس بالخطأ."
+                            else
+                                "ملاحظة: تخفيض الحد يتطلب ضغطة مطوّلة على زر الحفظ لحماية إعداداتك من اللمس بالخطأ.",
+                            color = VlastTokens.BrandAmber,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
 
@@ -156,6 +196,7 @@ fun LimitInputDialog(
                                 .clickable {
                                     textInput = parts[0]
                                     selectedUnit = parts[1]
+                                    showDecreaseHint = false
                                 }
                                 .padding(horizontal = 8.dp, vertical = 6.dp)
                         ) {
@@ -171,16 +212,48 @@ fun LimitInputDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val bytes = SmartUnitFormatter.parseInputToBytes(textInput, selectedUnit)
-                    if (bytes != null && bytes > 0L) {
-                        onConfirm(bytes)
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = VlastTokens.BrandCyan)
-            ) {
-                Text("حفظ وتطبيق", fontWeight = FontWeight.Bold, color = VlastTokens.DarkBackground)
+            if (isDecrease) {
+                // Item 12: Decrease requires a long press to prevent accidental touch
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                        .background(VlastTokens.BrandAmber)
+                        .pointerInput(parsedBytes) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (parsedBytes != null && parsedBytes > 0L) {
+                                        onConfirm(parsedBytes)
+                                    }
+                                },
+                                onTap = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    showDecreaseHint = true
+                                }
+                            )
+                        }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "تخفيض الحد (اضغط مطولاً)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = VlastTokens.DarkBackground
+                    )
+                }
+            } else {
+                // Raising or setting limit does NOT require long-press or confirmation (Items 7 & 12)
+                Button(
+                    onClick = {
+                        if (parsedBytes != null && parsedBytes > 0L) {
+                            onConfirm(parsedBytes)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = VlastTokens.BrandCyan)
+                ) {
+                    Text("حفظ وتطبيق", fontWeight = FontWeight.Bold, color = VlastTokens.DarkBackground)
+                }
             }
         },
         dismissButton = {

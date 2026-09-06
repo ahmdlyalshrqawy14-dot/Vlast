@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Center 66dp safe zone (21..87) for Material You themed monochrome launcher icon -->
+    <!-- Outer Shield Silhouette -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M54,24 L80,36 L80,60 C80,75 67,90 54,96 C41,90 28,75 28,60 L28,36 Z" />
+    <!-- Inner Lock cutout -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,42 C50.7,42 48,44.7 48,48 L48,53 L45,53 C43.9,53 43,53.9 43,55 L43,71 C43,72.1 43.9,73 45,73 L63,73 C64.1,73 65,72.1 65,71 L65,55 C65,53.9 64.1,53 63,53 L60,53 L60,48 C60,44.7 57.3,42 54,42 Z M54,45 C55.7,45 57,46.3 57,48 L57,53 L51,53 L51,48 C51,46.3 52.3,45 54,45 Z" />
+</vector>
