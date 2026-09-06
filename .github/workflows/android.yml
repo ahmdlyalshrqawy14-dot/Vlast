@@ -25,15 +25,24 @@ jobs:
         with:
           gradle-version: '9.3.1'
 
+      # إنشاء ملف settings.gradle.kts تلقائياً إذا كان مفقوداً
       - name: Ensure settings.gradle.kts exists
         run: |
           if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
             echo 'include(":app")' > settings.gradle.kts
           fi
 
+      # توليد ملف debug.keystore تلقائياً لتخطي خطوة validateSigningDebug
+      - name: Generate Debug Keystore
+        run: |
+          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          cp debug.keystore app/debug.keystore 2>/dev/null || true
+
+      # بناء الـ APK
       - name: Build Debug APK
         run: gradle :app:assembleDebug
 
+      # رفع ملف الـ APK النهائي
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
