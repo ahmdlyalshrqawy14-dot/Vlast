@@ -384,6 +384,13 @@ class UsageRepository(
         }
     }
 
+    suspend fun setHapticFeedbackEnabled(enabled: Boolean) = withContext(ioDispatcher) {
+        mutex.withLock {
+            val currentSettings = appSettingsDao.getSettingsSync() ?: AppSettingsEntity()
+            appSettingsDao.saveSettings(currentSettings.copy(hapticFeedbackEnabled = enabled))
+        }
+    }
+
     suspend fun setMonitoringActive(active: Boolean) = withContext(ioDispatcher) {
         mutex.withLock {
             val currentSettings = appSettingsDao.getSettingsSync() ?: AppSettingsEntity()
@@ -492,6 +499,33 @@ class UsageRepository(
         }
     }
 
+    suspend fun setAppNetworkTargets(
+        packageName: String,
+        appDisplayName: String,
+        targetWifi: Boolean,
+        targetSim1: Boolean,
+        targetSim2: Boolean
+    ) = withContext(ioDispatcher) {
+        mutex.withLock {
+            val today = getTodayDateString()
+            val existing = managedAppRuleDao?.getRuleSync(packageName)
+            if (existing != null) {
+                managedAppRuleDao.updateNetworkTargets(packageName, targetWifi, targetSim1, targetSim2)
+            } else {
+                managedAppRuleDao?.insertOrUpdate(
+                    ManagedAppRuleEntity(
+                        packageName = packageName,
+                        appDisplayName = appDisplayName,
+                        targetWifi = targetWifi,
+                        targetSim1 = targetSim1,
+                        targetSim2 = targetSim2,
+                        lastResetDate = today
+                    )
+                )
+            }
+        }
+    }
+
     suspend fun deleteAppRule(packageName: String) = withContext(ioDispatcher) {
         mutex.withLock {
             managedAppRuleDao?.deleteRule(packageName)
@@ -502,6 +536,17 @@ class UsageRepository(
         val today = getTodayDateString()
         managedAppRuleDao?.addAppUsageBytes(packageName, bytes, today)
         managedAppRuleDao?.getRuleSync(packageName)?.let { ManagedAppRule.fromEntity(it) }
+    }
+
+    suspend fun factoryResetApp() = withContext(ioDispatcher) {
+        mutex.withLock {
+            dailyUsageDao.clearAllDailyRecords()
+            managedAppRuleDao?.clearAllRules()
+            activityLogDao?.clearLogs()
+            appSettingsDao.saveSettings(AppSettingsEntity())
+            val today = getTodayDateString()
+            dailyUsageDao.insertOrUpdate(DailyUsageEntity.fromDomain(createInitialRecordForDate(today)))
+        }
     }
 
     private fun createInitialRecordForDate(date: String): DailyUsageRecord {

@@ -127,6 +127,7 @@ fun VlastAppNavigationShell(
     val historyRangeDays by viewModel.historyDays.collectAsState()
     val isSettingsUnlocked by viewModel.isSettingsUnlocked.collectAsState()
     val appRules by viewModel.appRules.collectAsState()
+    val selectedDashboardTab by viewModel.selectedDashboardTab.collectAsState()
     val showVpnErrorDialog by viewModel.showVpnErrorDialog.collectAsState()
     val showKillSwitchSignatureMoment by viewModel.showKillSwitchSignatureMoment.collectAsState()
 
@@ -245,6 +246,9 @@ fun VlastAppNavigationShell(
                                         onDisableAppLimit = { pkg, name ->
                                             viewModel.setAppDailyLimit(pkg, name, null, false)
                                         },
+                                        onUpdateAppNetworkTargets = { pkg, name, wifi, sim1, sim2 ->
+                                            viewModel.setAppNetworkTargets(pkg, name, wifi, sim1, sim2)
+                                        },
                                         onBack = { isAppControlOpen = false }
                                     )
                                 } else {
@@ -338,6 +342,9 @@ fun VlastAppNavigationShell(
                                     },
                                     onDisableAppLimit = { pkg, name ->
                                         viewModel.setAppDailyLimit(pkg, name, null, false)
+                                    },
+                                    onUpdateAppNetworkTargets = { pkg, name, wifi, sim1, sim2 ->
+                                        viewModel.setAppNetworkTargets(pkg, name, wifi, sim1, sim2)
                                     },
                                     onBack = { isAppControlOpen = false }
                                 )
@@ -634,10 +641,13 @@ private fun AppContent(
 
     when (currentDestination) {
         VlastNavDestination.HOME -> {
+            val selectedTab by viewModel.selectedDashboardTab.collectAsState()
             DashboardScreen(
                 todayRecord = todayRecord,
                 activeNetwork = activeNetwork,
                 simSlot = settings.activeSimSlot,
+                selectedTab = selectedTab,
+                onSelectTab = { viewModel.selectDashboardTab(it) },
                 priorityStatus = priorityStatus,
                 isKillSwitchActive = settings.killSwitchActive,
                 undoState = undoState,
@@ -647,23 +657,27 @@ private fun AppContent(
                 onToggleKillSwitch = {
                     viewModel.requestKillSwitchToggle(!settings.killSwitchActive)
                 },
-                onOpenEditRecurringLimit = { onOpenEditRecurringLimit(activeNetwork) },
-                onToggleRecurringEnabled = { enabled ->
-                    val currentLimit = when (activeNetwork) {
+                onOpenEditRecurringLimitForNetwork = { net, _ ->
+                    onOpenEditRecurringLimit(net)
+                },
+                onToggleRecurringEnabledForNetwork = { net, slot, enabled ->
+                    val currentLimit = when (net) {
                         NetworkType.WIFI -> todayRecord.wifiRecurringLimitBytes
-                        NetworkType.MOBILE -> if (settings.activeSimSlot == 1) todayRecord.sim2RecurringLimitBytes else todayRecord.mobileRecurringLimitBytes
+                        NetworkType.MOBILE -> if (slot == 1) todayRecord.sim2RecurringLimitBytes else todayRecord.mobileRecurringLimitBytes
                         NetworkType.NONE -> 0L
                     }
                     viewModel.requestSetRecurringLimit(
-                        networkType = activeNetwork,
+                        networkType = net,
                         newLimitBytes = currentLimit,
                         enabled = enabled,
-                        simSlot = settings.activeSimSlot
+                        simSlot = slot
                     )
                 },
-                onOpenSetTodayLimit = { onOpenSetTodayLimit(activeNetwork) },
-                onClearTodayLimit = {
-                    viewModel.setTodayOverride(activeNetwork, null, settings.activeSimSlot)
+                onOpenSetTodayLimitForNetwork = { net, _ ->
+                    onOpenSetTodayLimit(net)
+                },
+                onClearTodayLimitForNetwork = { net, slot ->
+                    viewModel.setTodayOverride(net, null, slot)
                 },
                 onPerformUndo = { viewModel.performUndo() },
                 onCopyValue = { label, value ->
@@ -715,12 +729,16 @@ private fun AppContent(
                 },
                 isSoundEnabled = settings.soundAlertEnabled,
                 onToggleSound = { viewModel.toggleSoundAlert(it) },
+                isHapticEnabled = settings.hapticFeedbackEnabled,
+                onToggleHaptic = { viewModel.toggleHapticFeedback(it) },
                 isColorBlindMode = settings.colorBlindModeEnabled,
                 onToggleColorBlindMode = { viewModel.toggleColorBlindMode(it) },
                 currentLanguage = currentLanguage,
                 onSelectLanguage = onLanguageChange,
                 onNavigateToAppControl = onNavigateToAppControl,
-                onNavigateToStorePreview = onNavigateToStorePreview
+                onNavigateToStorePreview = onNavigateToStorePreview,
+                onRequestShutdownApp = { viewModel.requestShutdownApp() },
+                onRequestFactoryResetApp = { viewModel.requestFactoryResetApp() }
             )
         }
     }

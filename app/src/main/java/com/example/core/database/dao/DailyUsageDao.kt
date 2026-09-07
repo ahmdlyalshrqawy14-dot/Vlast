@@ -27,4 +27,7 @@ interface DailyUsageDao {
 
     @Query("SELECT * FROM daily_usage_records WHERE date BETWEEN :startDate AND :endDate ORDER BY date ASC")
     fun getRecordsBetweenDates(startDate: String, endDate: String): Flow<List<DailyUsageEntity>>
+
+    @Query("DELETE FROM daily_usage_records")
+    suspend fun clearAllDailyRecords()
 }

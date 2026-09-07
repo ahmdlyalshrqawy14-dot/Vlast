@@ -33,7 +33,7 @@ object EnforcementRulesEngine {
         }
 
         // Priority 2: Per-App Full Block (isFullyBlocked)
-        if (appRule != null && appRule.isFullyBlocked) {
+        if (appRule != null && appRule.isFullyBlocked && appRule.appliesToNetwork(networkType, simSlot)) {
             return EnforcementDecision.BlockedAppFull(
                 packageName = appRule.packageName,
                 appName = appRule.appDisplayName
@@ -58,7 +58,7 @@ object EnforcementRulesEngine {
 
         // Priority 4: Per-App Daily Quota evaluation
         if (appRule != null && appRule.dailyLimitEnabled && appRule.dailyLimitBytes != null && appRule.dailyLimitBytes > 0L) {
-            if (appRule.usedBytesToday >= appRule.dailyLimitBytes) {
+            if (appRule.appliesToNetwork(networkType, simSlot) && appRule.usedBytesToday >= appRule.dailyLimitBytes) {
                 return EnforcementDecision.BlockedAppLimitExceeded(
                     packageName = appRule.packageName,
                     appName = appRule.appDisplayName,

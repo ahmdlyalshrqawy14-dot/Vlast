@@ -39,4 +39,10 @@ interface ManagedAppRuleDao {
 
     @Query("UPDATE managed_app_rules SET dailyLimitBytes = :limitBytes, dailyLimitEnabled = :enabled WHERE packageName = :packageName")
     suspend fun updateLimit(packageName: String, limitBytes: Long?, enabled: Boolean)
+
+    @Query("UPDATE managed_app_rules SET targetWifi = :targetWifi, targetSim1 = :targetSim1, targetSim2 = :targetSim2 WHERE packageName = :packageName")
+    suspend fun updateNetworkTargets(packageName: String, targetWifi: Boolean, targetSim1: Boolean, targetSim2: Boolean)
+
+    @Query("DELETE FROM managed_app_rules")
+    suspend fun clearAllRules()
 }

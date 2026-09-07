@@ -73,5 +73,9 @@ data class AppSettingsEntity(
 
     // Color-blind support mode (Section 8)
     @ColumnInfo(name = "color_blind_mode_enabled")
-    val colorBlindModeEnabled: Boolean = false
+    val colorBlindModeEnabled: Boolean = false,
+
+    // Haptic / Vibration feedback toggle (Section 15)
+    @ColumnInfo(name = "haptic_feedback_enabled")
+    val hapticFeedbackEnabled: Boolean = true
 )

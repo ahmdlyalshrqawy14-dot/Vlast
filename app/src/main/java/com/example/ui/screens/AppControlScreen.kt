@@ -97,6 +97,7 @@ fun AppControlScreen(
     onRequestBlockToggle: (packageName: String, appName: String, targetBlocked: Boolean) -> Unit,
     onOpenSetAppLimit: (packageName: String, appName: String, currentLimitBytes: Long?) -> Unit,
     onDisableAppLimit: (packageName: String, appName: String) -> Unit,
+    onUpdateAppNetworkTargets: (packageName: String, appName: String, targetWifi: Boolean, targetSim1: Boolean, targetSim2: Boolean) -> Unit = { _, _, _, _, _ -> },
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -336,7 +337,10 @@ fun AppControlScreen(
                             },
                             onRequestBlockToggle = { onRequestBlockToggle(app.packageName, app.appName, it) },
                             onOpenSetLimit = { onOpenSetAppLimit(app.packageName, app.appName, rule?.dailyLimitBytes) },
-                            onDisableLimit = { onDisableAppLimit(app.packageName, app.appName) }
+                            onDisableLimit = { onDisableAppLimit(app.packageName, app.appName) },
+                            onUpdateNetworkTargets = { wifi, sim1, sim2 ->
+                                onUpdateAppNetworkTargets(app.packageName, app.appName, wifi, sim1, sim2)
+                            }
                         )
                     }
 
@@ -365,7 +369,10 @@ fun AppControlScreen(
                         },
                         onRequestBlockToggle = { onRequestBlockToggle(app.packageName, app.appName, it) },
                         onOpenSetLimit = { onOpenSetAppLimit(app.packageName, app.appName, rule?.dailyLimitBytes) },
-                        onDisableLimit = { onDisableAppLimit(app.packageName, app.appName) }
+                        onDisableLimit = { onDisableAppLimit(app.packageName, app.appName) },
+                        onUpdateNetworkTargets = { wifi, sim1, sim2 ->
+                            onUpdateAppNetworkTargets(app.packageName, app.appName, wifi, sim1, sim2)
+                        }
                     )
                 }
             }
@@ -382,12 +389,16 @@ private fun AppRuleCard(
     onCardClick: () -> Unit,
     onRequestBlockToggle: (Boolean) -> Unit,
     onOpenSetLimit: () -> Unit,
-    onDisableLimit: () -> Unit
+    onDisableLimit: () -> Unit,
+    onUpdateNetworkTargets: (targetWifi: Boolean, targetSim1: Boolean, targetSim2: Boolean) -> Unit
 ) {
     val isBlocked = rule?.isFullyBlocked == true
     val hasLimit = rule?.dailyLimitEnabled == true && (rule.dailyLimitBytes ?: 0L) > 0L
     val usedBytes = rule?.usedBytesToday ?: 0L
     val limitBytes = rule?.dailyLimitBytes ?: 0L
+    val targetWifi = rule?.targetWifi ?: true
+    val targetSim1 = rule?.targetSim1 ?: true
+    val targetSim2 = rule?.targetSim2 ?: true
 
     val ratio = if (hasLimit && limitBytes > 0L) {
         (usedBytes.toDouble() / limitBytes.toDouble()).coerceIn(0.0, 1.0)
@@ -491,7 +502,7 @@ private fun AppRuleCard(
                     ) {
                         if (isBlocked) {
                             Text(
-                                text = "محظور بالكامل",
+                                text = "محظور بالكامل (${rule?.networkTargetSummary ?: "جميع الشبكات"})",
                                 fontSize = 11.sp,
                                 color = VlastTokens.SemanticRed,
                                 fontWeight = FontWeight.Bold
@@ -499,7 +510,7 @@ private fun AppRuleCard(
                         } else if (hasLimit) {
                             val limitDisplay = SmartUnitFormatter.format(limitBytes)
                             Text(
-                                text = "حد يومي: ${limitDisplay.amount} ${limitDisplay.unit}",
+                                text = "حد يومي: ${limitDisplay.amount} ${limitDisplay.unit} (${rule?.networkTargetSummary ?: "جميع الشبكات"})",
                                 fontSize = 11.sp,
                                 color = progressColor,
                                 fontWeight = FontWeight.Medium
@@ -625,7 +636,86 @@ private fun AppRuleCard(
                         }
                     }
 
-                    // 3) Usage Display with Semantic Color
+                    // 3) Network Selection Section
+                    Spacer(modifier = Modifier.height(VlastTokens.Space12))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                            .background(VlastTokens.DarkSurface)
+                            .padding(VlastTokens.Space8)
+                    ) {
+                        Text(
+                            text = "نطاق الشبكة (الشرائح والواي فاي المطبقة):",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = VlastTokens.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Wifi Choice Chip
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                                    .background(if (targetWifi) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant)
+                                    .border(1.dp, if (targetWifi) VlastTokens.BrandCyan else VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusSmall))
+                                    .clickable {
+                                        onUpdateNetworkTargets(!targetWifi, targetSim1, targetSim2)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "الواي فاي ${if (targetWifi) "✓" else ""}",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (targetWifi) VlastTokens.DarkBackground else VlastTokens.TextMuted
+                                )
+                            }
+
+                            // SIM 1 Choice Chip
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                                    .background(if (targetSim1) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant)
+                                    .border(1.dp, if (targetSim1) VlastTokens.BrandCyan else VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusSmall))
+                                    .clickable {
+                                        onUpdateNetworkTargets(targetWifi, !targetSim1, targetSim2)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "الشريحة 1 ${if (targetSim1) "✓" else ""}",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (targetSim1) VlastTokens.DarkBackground else VlastTokens.TextMuted
+                                )
+                            }
+
+                            // SIM 2 Choice Chip
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+                                    .background(if (targetSim2) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant)
+                                    .border(1.dp, if (targetSim2) VlastTokens.BrandCyan else VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusSmall))
+                                    .clickable {
+                                        onUpdateNetworkTargets(targetWifi, targetSim1, !targetSim2)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "الشريحة 2 ${if (targetSim2) "✓" else ""}",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (targetSim2) VlastTokens.DarkBackground else VlastTokens.TextMuted
+                                )
+                            }
+                        }
+                    }
+
+                    // 4) Usage Display with Semantic Color
                     Spacer(modifier = Modifier.height(VlastTokens.Space12))
                     val usedFormatted = SmartUnitFormatter.format(usedBytes)
                     Column(

@@ -20,7 +20,7 @@ import com.example.core.database.entity.ManagedAppRuleEntity
         ActivityLogEntity::class,
         ManagedAppRuleEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class VlastDatabase : RoomDatabase() {

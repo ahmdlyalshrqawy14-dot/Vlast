@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SimCard
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,6 +57,8 @@ import androidx.core.content.ContextCompat
 import com.example.R
 import com.example.core.sim.DualSimManager
 import androidx.compose.material.icons.filled.Shop
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Storefront
 import com.example.ui.components.AboutVlastVisualCard
 import com.example.ui.theme.NumberFontFamily
@@ -85,12 +88,16 @@ fun SettingsScreen(
     onTogglePinLock: (Boolean) -> Unit,
     isSoundEnabled: Boolean,
     onToggleSound: (Boolean) -> Unit,
+    isHapticEnabled: Boolean = true,
+    onToggleHaptic: (Boolean) -> Unit = {},
     isColorBlindMode: Boolean,
     onToggleColorBlindMode: (Boolean) -> Unit,
     currentLanguage: String = "ar",
     onSelectLanguage: (String) -> Unit = {},
     onNavigateToAppControl: () -> Unit = {},
     onNavigateToStorePreview: () -> Unit = {},
+    onRequestShutdownApp: () -> Unit = {},
+    onRequestFactoryResetApp: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -204,6 +211,24 @@ fun SettingsScreen(
             Switch(
                 checked = isSoundEnabled,
                 onCheckedChange = onToggleSound,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = VlastTokens.BrandCyan,
+                    checkedTrackColor = VlastTokens.BrandCyan.copy(alpha = 0.3f),
+                    uncheckedThumbColor = VlastTokens.TextMuted,
+                    uncheckedTrackColor = VlastTokens.DarkBackground
+                )
+            )
+        }
+
+        // Dedicated Haptic Feedback / Vibration System (Section 15)
+        SettingCard(
+            icon = Icons.Filled.Vibration,
+            title = "تنبيهات الاهتزاز (Haptic)",
+            subtitle = "اهتزاز تفاعلي عند الوصول لـ 90% أو عند لحظة قطع الاتصال"
+        ) {
+            Switch(
+                checked = isHapticEnabled,
+                onCheckedChange = onToggleHaptic,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = VlastTokens.BrandCyan,
                     checkedTrackColor = VlastTokens.BrandCyan.copy(alpha = 0.3f),
@@ -451,6 +476,40 @@ fun SettingsScreen(
                     tint = VlastTokens.BrandAmber,
                     modifier = Modifier.size(20.dp)
                 )
+            }
+        }
+
+        // 4a) Shutdown Vlast completely button
+        SettingCard(
+            icon = Icons.Filled.PowerSettingsNew,
+            title = "إيقاف تشغيل التطبيق بالكامل",
+            subtitle = "تجميد النفق المباشر والمراقبة والإشعارات والهوت سبوت وتوقف الخلفية فوراً"
+        ) {
+            Button(
+                onClick = onRequestShutdownApp,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VlastTokens.BrandRed.copy(alpha = 0.85f),
+                    contentColor = Color.White
+                )
+            ) {
+                Text("إيقاف التشغيل", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // 4b) Full Factory Reset button
+        SettingCard(
+            icon = Icons.Filled.RestartAlt,
+            title = "إعادة تعيين شاملة للتطبيق",
+            subtitle = "مسح جميع الحدود والسجلات والبيانات وقواعد التطبيقات وتصفير الإعدادات كأنه ثُبّت للتو"
+        ) {
+            Button(
+                onClick = onRequestFactoryResetApp,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VlastTokens.BrandRed,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("إعادة تعيين شاملة", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
 

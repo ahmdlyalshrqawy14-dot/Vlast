@@ -54,7 +54,20 @@ import kotlinx.coroutines.launch
  * - First-day empty state detection (Item 22)
  * - Rapid-toggle debouncing (Item 18)
  */
+enum class DashboardNetworkTab {
+    WIFI,
+    SIM_1,
+    SIM_2
+}
+
 class VlastMechanicsViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val _selectedDashboardTab = MutableStateFlow(DashboardNetworkTab.WIFI)
+    val selectedDashboardTab: StateFlow<DashboardNetworkTab> = _selectedDashboardTab.asStateFlow()
+
+    fun selectDashboardTab(tab: DashboardNetworkTab) {
+        _selectedDashboardTab.value = tab
+    }
 
     private val db = VlastDatabase.getInstance(application)
     val repository = UsageRepository(
@@ -122,6 +135,8 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
             val packageName: String,
             val appName: String
         ) : ConfirmationRequest()
+        data object ShutdownApp : ConfirmationRequest()
+        data object FactoryResetApp : ConfirmationRequest()
     }
 
     private val _activeConfirmation = MutableStateFlow<ConfirmationRequest?>(null)
@@ -247,7 +262,51 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
             is ConfirmationRequest.DisableAppBlock -> {
                 setAppFullyBlocked(request.packageName, request.appName, false)
             }
+            is ConfirmationRequest.ShutdownApp -> {
+                shutdownApp()
+            }
+            is ConfirmationRequest.FactoryResetApp -> {
+                factoryResetApp()
+            }
             null -> {}
+        }
+    }
+
+    fun requestShutdownApp() {
+        _activeConfirmation.value = ConfirmationRequest.ShutdownApp
+    }
+
+    fun requestFactoryResetApp() {
+        _activeConfirmation.value = ConfirmationRequest.FactoryResetApp
+    }
+
+    fun shutdownApp() {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val stopIntent = Intent(app, VlastVpnService::class.java).apply {
+                action = VlastVpnService.ACTION_STOP_VPN
+            }
+            app.stopService(stopIntent)
+            repository.setMonitoringActive(false)
+            repository.setKillSwitch(false)
+            repository.logActivity(
+                eventType = ActivityLogEntry.EventType.DISCONNECTED,
+                reason = ActivityLogEntry.SpecificCutReason.MANUAL_KILL_SWITCH,
+                description = "تم إيقاف تشغيل التطبيق بالكامل بقرار المستخدم."
+            )
+            _copyMessage.value = "تم إيقاف تشغيل Vlast بالكامل وتجميد الخدمات."
+        }
+    }
+
+    fun factoryResetApp() {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val stopIntent = Intent(app, VlastVpnService::class.java).apply {
+                action = VlastVpnService.ACTION_STOP_VPN
+            }
+            app.stopService(stopIntent)
+            repository.factoryResetApp()
+            _copyMessage.value = "تمت إعادة تعيين التطبيق بالكامل بنجاح."
         }
     }
 
@@ -485,6 +544,15 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    /**
+     * Section 15: Haptic feedback toggle.
+     */
+    fun toggleHapticFeedback(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.setHapticFeedbackEnabled(enabled)
+        }
+    }
+
     // Phase 4: Per-App Control actions
     fun setAppFullyBlocked(packageName: String, appDisplayName: String, isBlocked: Boolean) {
         viewModelScope.launch {
@@ -530,6 +598,24 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
     fun deleteAppRule(packageName: String) {
         viewModelScope.launch {
             repository.deleteAppRule(packageName)
+        }
+    }
+
+    fun setAppNetworkTargets(
+        packageName: String,
+        appDisplayName: String,
+        targetWifi: Boolean,
+        targetSim1: Boolean,
+        targetSim2: Boolean
+    ) {
+        viewModelScope.launch {
+            repository.setAppNetworkTargets(
+                packageName = packageName,
+                appDisplayName = appDisplayName,
+                targetWifi = targetWifi,
+                targetSim1 = targetSim1,
+                targetSim2 = targetSim2
+            )
         }
     }
 

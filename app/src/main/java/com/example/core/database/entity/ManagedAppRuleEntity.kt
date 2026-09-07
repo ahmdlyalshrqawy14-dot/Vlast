@@ -36,5 +36,14 @@ data class ManagedAppRuleEntity(
     val usedBytesToday: Long = 0L,
 
     @ColumnInfo(name = "lastResetDate")
-    val lastResetDate: String
+    val lastResetDate: String,
+
+    @ColumnInfo(name = "targetWifi")
+    val targetWifi: Boolean = true,
+
+    @ColumnInfo(name = "targetSim1")
+    val targetSim1: Boolean = true,
+
+    @ColumnInfo(name = "targetSim2")
+    val targetSim2: Boolean = true
 )

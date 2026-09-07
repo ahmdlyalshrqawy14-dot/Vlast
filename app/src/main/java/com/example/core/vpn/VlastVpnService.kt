@@ -94,6 +94,7 @@ class VlastVpnService : VpnService() {
 
     // Phase 4: Per-App Control in-memory tracking
     private var connectivityManager: ConnectivityManager? = null
+    private var isConnectionOwnerUidSupported = true
     private val managedAppRulesMap = ConcurrentHashMap<String, ManagedAppRule>()
     private val uidToPackageMap = ConcurrentHashMap<Int, String>()
     private val appBatchBytesMap = ConcurrentHashMap<String, Long>()
@@ -258,7 +259,7 @@ class VlastVpnService : VpnService() {
 
                     // Section 1: Determine packet owner UID on Android 10+ (API 29+)
                     var appRule: ManagedAppRule? = null
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && connectivityManager != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && connectivityManager != null && isConnectionOwnerUidSupported) {
                         val version = (rawBytes[0].toInt() shr 4) and 0x0F
                         if (version == 4 && bytesRead >= 20) {
                             val protocol = rawBytes[9].toInt() and 0xFF
@@ -275,7 +276,13 @@ class VlastVpnService : VpnService() {
                                 val uid = try {
                                     val qUid = connectivityManager?.getConnectionOwnerUid(protocol, localSocket, remoteSocket) ?: -1
                                     if (qUid > 0) qUid else (connectivityManager?.getConnectionOwnerUid(protocol, remoteSocket, localSocket) ?: -1)
-                                } catch (_: Exception) {
+                                } catch (e: SecurityException) {
+                                    isConnectionOwnerUidSupported = false
+                                    -1
+                                } catch (e: UnsupportedOperationException) {
+                                    isConnectionOwnerUidSupported = false
+                                    -1
+                                } catch (_: Throwable) {
                                     -1
                                 }
 
