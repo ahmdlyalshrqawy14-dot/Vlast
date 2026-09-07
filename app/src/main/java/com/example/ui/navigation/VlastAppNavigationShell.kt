@@ -460,11 +460,7 @@ fun VlastAppNavigationShell(
 
                 // Phase 4: Input Dialog for Per-App Daily Limit
                 if (editingAppLimitPackage != null) {
-                    val netLabel = when (editingAppLimitNetworkType) {
-                        NetworkType.WIFI -> "الواي فاي"
-                        NetworkType.MOBILE -> if (editingAppLimitSimSlot == 1) "الشريحة 2" else "الشريحة 1"
-                        NetworkType.NONE -> "الشبكة"
-                    }
+                    val netLabel = editingAppLimitNetworkType.getLabel(editingAppLimitSimSlot)
                     LimitInputDialog(
                         title = "تحديد الحد اليومي ($netLabel) لتطبيق $editingAppLimitName",
                         initialBytes = editingAppLimitInitialBytes,

@@ -509,14 +509,30 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    private fun hashPin(pin: String?): String? {
+        if (pin.isNullOrEmpty()) return null
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val salt = "VlastAppPinSalt_v1"
+        val bytes = digest.digest((salt + pin).toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
     /**
      * Settings Lock PIN verification (Item 16).
      */
     fun unlockSettings(pinEntered: String): Boolean {
         val savedPin = settings.value.settingsLockPin
-        val isValid = savedPin == null || savedPin == pinEntered
+        if (savedPin == null) {
+            _isSettingsUnlocked.value = true
+            return true
+        }
+        val hashedEntered = hashPin(pinEntered)
+        val isValid = savedPin == hashedEntered || savedPin == pinEntered
         if (isValid) {
             _isSettingsUnlocked.value = true
+            if (savedPin == pinEntered) {
+                setSettingsPinLock(true, pinEntered)
+            }
         }
         return isValid
     }
@@ -527,7 +543,8 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
 
     fun setSettingsPinLock(enabled: Boolean, pin: String?) {
         viewModelScope.launch {
-            repository.setSettingsLock(enabled, pin)
+            val storedValue = if (enabled) hashPin(pin) else null
+            repository.setSettingsLock(enabled, storedValue)
             _isSettingsUnlocked.value = !enabled
         }
     }
@@ -609,11 +626,7 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
     ) {
         viewModelScope.launch {
             repository.setAppNetworkLimit(packageName, appDisplayName, networkType, simSlot, limitBytes, enabled)
-            val netLabel = when (networkType) {
-                NetworkType.WIFI -> "الواي فاي"
-                NetworkType.MOBILE -> if (simSlot == 1) "الشريحة 2" else "الشريحة 1"
-                NetworkType.NONE -> "الشبكة"
-            }
+            val netLabel = networkType.getLabel(simSlot)
             if (enabled && limitBytes != null && limitBytes > 0L) {
                 val limitStr = SmartUnitFormatter.formatDisplay(limitBytes)
                 com.example.core.notification.AppControlNotificationHelper.notifyAppLimitUpdated(

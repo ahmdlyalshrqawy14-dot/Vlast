@@ -521,11 +521,7 @@ class UsageRepository(
                 managedAppRuleDao?.insertOrUpdate(entity)
             }
 
-            val netLabel = when (networkType) {
-                NetworkType.WIFI -> "الواي فاي"
-                NetworkType.MOBILE -> if (simSlot == 1) "الشريحة 2" else "الشريحة 1"
-                NetworkType.NONE -> "الشبكة"
-            }
+            val netLabel = networkType.getLabel(simSlot)
             val limitStr = if (limitBytes != null) com.example.core.model.SmartUnitFormatter.formatDisplay(limitBytes) else "بدون حد"
             logActivity(
                 eventType = ActivityLogEntry.EventType.CONFIG_CHANGED,
