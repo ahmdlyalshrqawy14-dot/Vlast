@@ -220,6 +220,16 @@ class VlastVpnService : VpnService() {
                 .addRoute("0.0.0.0", 0)
                 .addRoute("::", 0)
 
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (_: Exception) {}
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    builder.setMetered(false)
+                } catch (_: Exception) {}
+            }
+
             vpnInterface = builder.establish()
 
             serviceScope.launch {

@@ -120,7 +120,11 @@ fun AppControlScreen(
             val intent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            val launcherActivities = pm.queryIntentActivities(intent, 0)
+            val launcherActivities = try {
+                pm.queryIntentActivities(intent, 0)
+            } catch (_: Throwable) {
+                emptyList()
+            }
             val seen = HashSet<String>()
             val list = mutableListOf<InstalledAppItem>()
 

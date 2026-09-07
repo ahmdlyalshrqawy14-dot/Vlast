@@ -1,9 +1,11 @@
 package com.example.core.network
 
+import android.app.AppOpsManager
 import android.app.usage.NetworkStats
 import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.net.ConnectivityManager
+import android.os.Build
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -17,6 +19,25 @@ class NetworkStatsHelper(private val context: Context) {
 
     private val networkStatsManager =
         context.getSystemService(Context.NETWORK_STATS_SERVICE) as? NetworkStatsManager
+
+    fun hasUsageStatsPermission(): Boolean {
+        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                context.packageName
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                context.packageName
+            )
+        }
+        return mode == AppOpsManager.MODE_ALLOWED
+    }
 
     /**
      * Start of today in epoch milliseconds.
@@ -38,6 +59,7 @@ class NetworkStatsHelper(private val context: Context) {
      * Strictly isolated from device counters (Section 6).
      */
     fun queryHotspotBytesToday(): Long {
+        if (!hasUsageStatsPermission()) return 0L
         val nsm = networkStatsManager ?: return 0L
         val startTime = getTodayStartEpochMs()
         val endTime = getCurrentEpochMs()
@@ -91,6 +113,7 @@ class NetworkStatsHelper(private val context: Context) {
      * Queries total device Wi-Fi bytes today for calibration.
      */
     fun queryWifiDeviceBytesToday(): Long {
+        if (!hasUsageStatsPermission()) return 0L
         val nsm = networkStatsManager ?: return 0L
         val startTime = getTodayStartEpochMs()
         val endTime = getCurrentEpochMs()
@@ -108,6 +131,7 @@ class NetworkStatsHelper(private val context: Context) {
      * Queries total device Mobile bytes today for calibration.
      */
     fun queryMobileDeviceBytesToday(): Long {
+        if (!hasUsageStatsPermission()) return 0L
         val nsm = networkStatsManager ?: return 0L
         val startTime = getTodayStartEpochMs()
         val endTime = getCurrentEpochMs()
