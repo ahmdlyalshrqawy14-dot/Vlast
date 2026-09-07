@@ -137,6 +137,7 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
         ) : ConfirmationRequest()
         data object ShutdownApp : ConfirmationRequest()
         data object FactoryResetApp : ConfirmationRequest()
+        data object StopProtectionVpn : ConfirmationRequest()
     }
 
     private val _activeConfirmation = MutableStateFlow<ConfirmationRequest?>(null)
@@ -268,7 +269,32 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
             is ConfirmationRequest.FactoryResetApp -> {
                 factoryResetApp()
             }
+            is ConfirmationRequest.StopProtectionVpn -> {
+                stopProtectionVpn()
+            }
             null -> {}
+        }
+    }
+
+    fun requestStopProtection() {
+        _activeConfirmation.value = ConfirmationRequest.StopProtectionVpn
+    }
+
+    fun stopProtectionVpn() {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val stopIntent = Intent(app, VlastVpnService::class.java).apply {
+                action = VlastVpnService.ACTION_STOP_VPN
+            }
+            app.stopService(stopIntent)
+            repository.setMonitoringActive(false)
+            repository.setKillSwitch(false)
+            repository.logActivity(
+                eventType = ActivityLogEntry.EventType.DISCONNECTED,
+                reason = ActivityLogEntry.SpecificCutReason.MANUAL_KILL_SWITCH,
+                description = "تم إيقاف الـ VPN والحماية والعودة للإنترنت المباشر."
+            )
+            _copyMessage.value = "تم إيقاف الـ VPN والحماية. الإنترنت يعمل بشكل طبيعي الآن."
         }
     }
 
@@ -573,26 +599,42 @@ class VlastMechanicsViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun setAppDailyLimit(packageName: String, appDisplayName: String, limitBytes: Long?, enabled: Boolean) {
+    fun setAppNetworkLimit(
+        packageName: String,
+        appDisplayName: String,
+        networkType: NetworkType,
+        simSlot: Int,
+        limitBytes: Long?,
+        enabled: Boolean
+    ) {
         viewModelScope.launch {
-            repository.setAppDailyLimit(packageName, appDisplayName, limitBytes, enabled)
+            repository.setAppNetworkLimit(packageName, appDisplayName, networkType, simSlot, limitBytes, enabled)
+            val netLabel = when (networkType) {
+                NetworkType.WIFI -> "الواي فاي"
+                NetworkType.MOBILE -> if (simSlot == 1) "الشريحة 2" else "الشريحة 1"
+                NetworkType.NONE -> "الشبكة"
+            }
             if (enabled && limitBytes != null && limitBytes > 0L) {
                 val limitStr = SmartUnitFormatter.formatDisplay(limitBytes)
                 com.example.core.notification.AppControlNotificationHelper.notifyAppLimitUpdated(
                     getApplication(),
-                    appDisplayName,
+                    "$appDisplayName ($netLabel)",
                     packageName,
                     limitStr
                 )
             } else {
                 com.example.core.notification.AppControlNotificationHelper.notifyAppLimitUpdated(
                     getApplication(),
-                    appDisplayName,
+                    "$appDisplayName ($netLabel)",
                     packageName,
                     null
                 )
             }
         }
+    }
+
+    fun setAppDailyLimit(packageName: String, appDisplayName: String, limitBytes: Long?, enabled: Boolean) {
+        setAppNetworkLimit(packageName, appDisplayName, NetworkType.WIFI, 0, limitBytes, enabled)
     }
 
     fun deleteAppRule(packageName: String) {

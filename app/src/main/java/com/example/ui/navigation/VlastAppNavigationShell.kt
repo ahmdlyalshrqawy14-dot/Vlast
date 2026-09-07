@@ -150,10 +150,13 @@ fun VlastAppNavigationShell(
     var isAppControlOpen by remember { mutableStateOf(false) }
     var editingAppLimitPackage by remember { mutableStateOf<String?>(null) }
     var editingAppLimitName by remember { mutableStateOf("") }
+    var editingAppLimitNetworkType by remember { mutableStateOf(NetworkType.WIFI) }
+    var editingAppLimitSimSlot by remember { mutableStateOf(0) }
     var editingAppLimitInitialBytes by remember { mutableStateOf<Long?>(null) }
 
     // Dialog state
     var editDialogTarget by remember { mutableStateOf<NetworkType?>(null) }
+    var editDialogSimSlot by remember { mutableStateOf(0) }
     var isEditingTodayOverride by remember { mutableStateOf(false) }
     var isEditingHotspotThreshold by remember { mutableStateOf(false) }
 
@@ -232,22 +235,21 @@ fun VlastAppNavigationShell(
                             ) {
                                 if (isStorePreviewOpen) {
                                     PlayStorePreviewScreen(onBack = { isStorePreviewOpen = false })
-                                } else if (isAppControlOpen) {
+                                 } else if (isAppControlOpen) {
                                     AppControlScreen(
                                         appRules = appRules,
                                         onRequestBlockToggle = { pkg, name, targetBlocked ->
                                             viewModel.requestAppBlockToggle(pkg, name, targetBlocked)
                                         },
-                                        onOpenSetAppLimit = { pkg, name, currentLimit ->
+                                        onOpenSetAppNetworkLimit = { pkg, name, netType, simSlot, currentLimit ->
                                             editingAppLimitPackage = pkg
                                             editingAppLimitName = name
+                                            editingAppLimitNetworkType = netType
+                                            editingAppLimitSimSlot = simSlot
                                             editingAppLimitInitialBytes = currentLimit
                                         },
-                                        onDisableAppLimit = { pkg, name ->
-                                            viewModel.setAppDailyLimit(pkg, name, null, false)
-                                        },
-                                        onUpdateAppNetworkTargets = { pkg, name, wifi, sim1, sim2 ->
-                                            viewModel.setAppNetworkTargets(pkg, name, wifi, sim1, sim2)
+                                        onDisableAppNetworkLimit = { pkg, name, netType, simSlot ->
+                                            viewModel.setAppNetworkLimit(pkg, name, netType, simSlot, null, false)
                                         },
                                         onBack = { isAppControlOpen = false }
                                     )
@@ -269,12 +271,14 @@ fun VlastAppNavigationShell(
                                         onRefreshSims = { availableSims = viewModel.dualSimManager.getAvailableSims() },
                                         currentLanguage = currentLang,
                                         onLanguageChange = onLanguageChange,
-                                        onOpenEditRecurringLimit = { network ->
+                                        onOpenEditRecurringLimit = { network, slot ->
                                             editDialogTarget = network
+                                            editDialogSimSlot = slot
                                             isEditingTodayOverride = false
                                         },
-                                        onOpenSetTodayLimit = { network ->
+                                        onOpenSetTodayLimit = { network, slot ->
                                             editDialogTarget = network
+                                            editDialogSimSlot = slot
                                             isEditingTodayOverride = true
                                         },
                                         onNavigateToReports = { currentDestination = VlastNavDestination.REPORTS },
@@ -335,16 +339,15 @@ fun VlastAppNavigationShell(
                                     onRequestBlockToggle = { pkg, name, targetBlocked ->
                                         viewModel.requestAppBlockToggle(pkg, name, targetBlocked)
                                     },
-                                    onOpenSetAppLimit = { pkg, name, currentLimit ->
+                                    onOpenSetAppNetworkLimit = { pkg, name, netType, simSlot, currentLimit ->
                                         editingAppLimitPackage = pkg
                                         editingAppLimitName = name
+                                        editingAppLimitNetworkType = netType
+                                        editingAppLimitSimSlot = simSlot
                                         editingAppLimitInitialBytes = currentLimit
                                     },
-                                    onDisableAppLimit = { pkg, name ->
-                                        viewModel.setAppDailyLimit(pkg, name, null, false)
-                                    },
-                                    onUpdateAppNetworkTargets = { pkg, name, wifi, sim1, sim2 ->
-                                        viewModel.setAppNetworkTargets(pkg, name, wifi, sim1, sim2)
+                                    onDisableAppNetworkLimit = { pkg, name, netType, simSlot ->
+                                        viewModel.setAppNetworkLimit(pkg, name, netType, simSlot, null, false)
                                     },
                                     onBack = { isAppControlOpen = false }
                                 )
@@ -366,12 +369,14 @@ fun VlastAppNavigationShell(
                                     onRefreshSims = { availableSims = viewModel.dualSimManager.getAvailableSims() },
                                     currentLanguage = currentLang,
                                     onLanguageChange = onLanguageChange,
-                                    onOpenEditRecurringLimit = { network ->
+                                    onOpenEditRecurringLimit = { network, slot ->
                                         editDialogTarget = network
+                                        editDialogSimSlot = slot
                                         isEditingTodayOverride = false
                                     },
-                                    onOpenSetTodayLimit = { network ->
+                                    onOpenSetTodayLimit = { network, slot ->
                                         editDialogTarget = network
+                                        editDialogSimSlot = slot
                                         isEditingTodayOverride = true
                                     },
                                     onNavigateToReports = { currentDestination = VlastNavDestination.REPORTS },
@@ -395,17 +400,22 @@ fun VlastAppNavigationShell(
                 // Input Dialog for Limits
                 if (editDialogTarget != null) {
                     val targetNetwork = editDialogTarget!!
+                    val targetLabel = when (targetNetwork) {
+                        NetworkType.WIFI -> "الواي فاي"
+                        NetworkType.MOBILE -> if (editDialogSimSlot == 1) "الشريحة 2" else "الشريحة 1"
+                        NetworkType.NONE -> "الشبكة"
+                    }
                     val title = if (isEditingTodayOverride) {
-                        "تحديد حد اليوم المؤقت لـ $targetNetwork"
+                        "تحديد حد اليوم المؤقت ($targetLabel)"
                     } else {
-                        "تعديل الحد الدائم لـ $targetNetwork"
+                        "تعديل الحد الدائم ($targetLabel)"
                     }
                     val currentVal = if (isEditingTodayOverride) {
-                        todayRecord.getEffectiveLimit(targetNetwork, settings.activeSimSlot)
+                        todayRecord.getEffectiveLimit(targetNetwork, editDialogSimSlot)
                     } else {
                         when (targetNetwork) {
                             NetworkType.WIFI -> todayRecord.wifiRecurringLimitBytes
-                            NetworkType.MOBILE -> if (settings.activeSimSlot == 1) todayRecord.sim2RecurringLimitBytes else todayRecord.mobileRecurringLimitBytes
+                            NetworkType.MOBILE -> if (editDialogSimSlot == 1) todayRecord.sim2RecurringLimitBytes else todayRecord.mobileRecurringLimitBytes
                             NetworkType.NONE -> 0L
                         }
                     }
@@ -415,13 +425,13 @@ fun VlastAppNavigationShell(
                         initialBytes = currentVal,
                         onConfirm = { newBytes ->
                             if (isEditingTodayOverride) {
-                                viewModel.setTodayOverride(targetNetwork, newBytes, settings.activeSimSlot)
+                                viewModel.setTodayOverride(targetNetwork, newBytes, editDialogSimSlot)
                             } else {
                                 viewModel.requestSetRecurringLimit(
                                     networkType = targetNetwork,
                                     newLimitBytes = newBytes,
                                     enabled = true,
-                                    simSlot = settings.activeSimSlot
+                                    simSlot = editDialogSimSlot
                                 )
                             }
                             editDialogTarget = null
@@ -450,13 +460,18 @@ fun VlastAppNavigationShell(
 
                 // Phase 4: Input Dialog for Per-App Daily Limit
                 if (editingAppLimitPackage != null) {
+                    val netLabel = when (editingAppLimitNetworkType) {
+                        NetworkType.WIFI -> "الواي فاي"
+                        NetworkType.MOBILE -> if (editingAppLimitSimSlot == 1) "الشريحة 2" else "الشريحة 1"
+                        NetworkType.NONE -> "الشبكة"
+                    }
                     LimitInputDialog(
-                        title = "تحديد الحد اليومي لتطبيق $editingAppLimitName",
+                        title = "تحديد الحد اليومي ($netLabel) لتطبيق $editingAppLimitName",
                         initialBytes = editingAppLimitInitialBytes,
                         onConfirm = { newBytes ->
                             val pkg = editingAppLimitPackage!!
                             val name = editingAppLimitName
-                            viewModel.setAppDailyLimit(pkg, name, newBytes, true)
+                            viewModel.setAppNetworkLimit(pkg, name, editingAppLimitNetworkType, editingAppLimitSimSlot, newBytes, true)
                             editingAppLimitPackage = null
                         },
                         onDismiss = { editingAppLimitPackage = null }
@@ -629,8 +644,8 @@ private fun AppContent(
     onRefreshSims: () -> Unit,
     currentLanguage: String,
     onLanguageChange: (String) -> Unit,
-    onOpenEditRecurringLimit: (NetworkType) -> Unit,
-    onOpenSetTodayLimit: (NetworkType) -> Unit,
+    onOpenEditRecurringLimit: (NetworkType, Int) -> Unit,
+    onOpenSetTodayLimit: (NetworkType, Int) -> Unit,
     onNavigateToReports: () -> Unit,
     onConfigureHotspot: () -> Unit,
     onNavigateToAppControl: () -> Unit = {},
@@ -657,8 +672,8 @@ private fun AppContent(
                 onToggleKillSwitch = {
                     viewModel.requestKillSwitchToggle(!settings.killSwitchActive)
                 },
-                onOpenEditRecurringLimitForNetwork = { net, _ ->
-                    onOpenEditRecurringLimit(net)
+                onOpenEditRecurringLimitForNetwork = { net, slot ->
+                    onOpenEditRecurringLimit(net, slot)
                 },
                 onToggleRecurringEnabledForNetwork = { net, slot, enabled ->
                     val currentLimit = when (net) {
@@ -673,8 +688,8 @@ private fun AppContent(
                         simSlot = slot
                     )
                 },
-                onOpenSetTodayLimitForNetwork = { net, _ ->
-                    onOpenSetTodayLimit(net)
+                onOpenSetTodayLimitForNetwork = { net, slot ->
+                    onOpenSetTodayLimit(net, slot)
                 },
                 onClearTodayLimitForNetwork = { net, slot ->
                     viewModel.setTodayOverride(net, null, slot)
@@ -737,6 +752,7 @@ private fun AppContent(
                 onSelectLanguage = onLanguageChange,
                 onNavigateToAppControl = onNavigateToAppControl,
                 onNavigateToStorePreview = onNavigateToStorePreview,
+                onRequestStopProtection = { viewModel.requestStopProtection() },
                 onRequestShutdownApp = { viewModel.requestShutdownApp() },
                 onRequestFactoryResetApp = { viewModel.requestFactoryResetApp() }
             )

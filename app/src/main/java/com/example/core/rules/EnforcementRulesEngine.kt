@@ -57,14 +57,18 @@ object EnforcementRulesEngine {
         }
 
         // Priority 4: Per-App Daily Quota evaluation
-        if (appRule != null && appRule.dailyLimitEnabled && appRule.dailyLimitBytes != null && appRule.dailyLimitBytes > 0L) {
-            if (appRule.appliesToNetwork(networkType, simSlot) && appRule.usedBytesToday >= appRule.dailyLimitBytes) {
-                return EnforcementDecision.BlockedAppLimitExceeded(
-                    packageName = appRule.packageName,
-                    appName = appRule.appDisplayName,
-                    usedBytes = appRule.usedBytesToday,
-                    limitBytes = appRule.dailyLimitBytes
-                )
+        if (appRule != null) {
+            val limit = appRule.getLimitForNetwork(networkType, simSlot)
+            if (limit != null && limit > 0L) {
+                val used = appRule.getUsedBytesForNetwork(networkType, simSlot)
+                if (used >= limit) {
+                    return EnforcementDecision.BlockedAppLimitExceeded(
+                        packageName = appRule.packageName,
+                        appName = appRule.appDisplayName,
+                        usedBytes = used,
+                        limitBytes = limit
+                    )
+                }
             }
         }
 

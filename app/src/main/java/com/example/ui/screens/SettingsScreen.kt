@@ -96,6 +96,7 @@ fun SettingsScreen(
     onSelectLanguage: (String) -> Unit = {},
     onNavigateToAppControl: () -> Unit = {},
     onNavigateToStorePreview: () -> Unit = {},
+    onRequestStopProtection: () -> Unit = {},
     onRequestShutdownApp: () -> Unit = {},
     onRequestFactoryResetApp: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -479,11 +480,37 @@ fun SettingsScreen(
             }
         }
 
-        // 4a) Shutdown Vlast completely button
+        // Section 4: Master Control Buttons (أزرار السيطرة الكاملة)
+        Text(
+            text = "أزرار السيطرة الكاملة",
+            color = VlastTokens.BrandRed,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = VlastTokens.Space8)
+        )
+
+        // 4a) Stop Protection / Stop VPN button
+        SettingCard(
+            icon = Icons.Filled.Security,
+            title = "إيقاف الحماية / إيقاف الـ VPN",
+            subtitle = "تجميد نفق الـ VPN والفلترة مؤقتاً، والعودة للإنترنت الطبيعي دون أي تدخل من Vlast"
+        ) {
+            Button(
+                onClick = onRequestStopProtection,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = VlastTokens.BrandAmber,
+                    contentColor = VlastTokens.DarkBackground
+                )
+            ) {
+                Text("إيقاف الـ VPN", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // 4b) Shutdown Vlast completely button
         SettingCard(
             icon = Icons.Filled.PowerSettingsNew,
-            title = "إيقاف تشغيل التطبيق بالكامل",
-            subtitle = "تجميد النفق المباشر والمراقبة والإشعارات والهوت سبوت وتوقف الخلفية فوراً"
+            title = "إيقاف التطبيق بالكامل",
+            subtitle = "إيقاف كل وظائف Vlast نهائياً (نفق + مراقبة + إشعارات + خدمات خلفية)"
         ) {
             Button(
                 onClick = onRequestShutdownApp,
@@ -496,11 +523,11 @@ fun SettingsScreen(
             }
         }
 
-        // 4b) Full Factory Reset button
+        // 4c) Full Factory Reset button
         SettingCard(
             icon = Icons.Filled.RestartAlt,
-            title = "إعادة تعيين شاملة للتطبيق",
-            subtitle = "مسح جميع الحدود والسجلات والبيانات وقواعد التطبيقات وتصفير الإعدادات كأنه ثُبّت للتو"
+            title = "إعادة تعيين شاملة",
+            subtitle = "إعادة التطبيق لحالته الأولى كأنه ثُبّت للتو (حذف كل الحدود والسجلات والإعدادات)"
         ) {
             Button(
                 onClick = onRequestFactoryResetApp,

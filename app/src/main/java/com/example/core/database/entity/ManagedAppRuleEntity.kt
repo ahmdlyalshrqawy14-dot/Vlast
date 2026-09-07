@@ -45,5 +45,33 @@ data class ManagedAppRuleEntity(
     val targetSim1: Boolean = true,
 
     @ColumnInfo(name = "targetSim2")
-    val targetSim2: Boolean = true
+    val targetSim2: Boolean = true,
+
+    // Per-network daily limits
+    @ColumnInfo(name = "wifiDailyLimitBytes")
+    val wifiDailyLimitBytes: Long? = null,
+
+    @ColumnInfo(name = "wifiDailyLimitEnabled")
+    val wifiDailyLimitEnabled: Boolean = false,
+
+    @ColumnInfo(name = "wifiUsedBytesToday")
+    val wifiUsedBytesToday: Long = 0L,
+
+    @ColumnInfo(name = "sim1DailyLimitBytes")
+    val sim1DailyLimitBytes: Long? = null,
+
+    @ColumnInfo(name = "sim1DailyLimitEnabled")
+    val sim1DailyLimitEnabled: Boolean = false,
+
+    @ColumnInfo(name = "sim1UsedBytesToday")
+    val sim1UsedBytesToday: Long = 0L,
+
+    @ColumnInfo(name = "sim2DailyLimitBytes")
+    val sim2DailyLimitBytes: Long? = null,
+
+    @ColumnInfo(name = "sim2DailyLimitEnabled")
+    val sim2DailyLimitEnabled: Boolean = false,
+
+    @ColumnInfo(name = "sim2UsedBytesToday")
+    val sim2UsedBytesToday: Long = 0L
 )

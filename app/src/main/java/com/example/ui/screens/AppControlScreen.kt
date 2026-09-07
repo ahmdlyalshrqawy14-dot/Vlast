@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.example.core.model.ManagedAppRule
+import com.example.core.model.NetworkType
 import com.example.core.model.SmartUnitFormatter
 import com.example.ui.theme.NumberFontFamily
 import com.example.ui.theme.VlastTokens
@@ -95,9 +97,8 @@ data class InstalledAppItem(
 fun AppControlScreen(
     appRules: List<ManagedAppRule>,
     onRequestBlockToggle: (packageName: String, appName: String, targetBlocked: Boolean) -> Unit,
-    onOpenSetAppLimit: (packageName: String, appName: String, currentLimitBytes: Long?) -> Unit,
-    onDisableAppLimit: (packageName: String, appName: String) -> Unit,
-    onUpdateAppNetworkTargets: (packageName: String, appName: String, targetWifi: Boolean, targetSim1: Boolean, targetSim2: Boolean) -> Unit = { _, _, _, _, _ -> },
+    onOpenSetAppNetworkLimit: (packageName: String, appName: String, networkType: NetworkType, simSlot: Int, currentLimitBytes: Long?) -> Unit,
+    onDisableAppNetworkLimit: (packageName: String, appName: String, networkType: NetworkType, simSlot: Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -340,10 +341,11 @@ fun AppControlScreen(
                                 expandedPackageName = if (expandedPackageName == app.packageName) null else app.packageName
                             },
                             onRequestBlockToggle = { onRequestBlockToggle(app.packageName, app.appName, it) },
-                            onOpenSetLimit = { onOpenSetAppLimit(app.packageName, app.appName, rule?.dailyLimitBytes) },
-                            onDisableLimit = { onDisableAppLimit(app.packageName, app.appName) },
-                            onUpdateNetworkTargets = { wifi, sim1, sim2 ->
-                                onUpdateAppNetworkTargets(app.packageName, app.appName, wifi, sim1, sim2)
+                            onOpenSetNetworkLimit = { netType, simSlot, currentLimit ->
+                                onOpenSetAppNetworkLimit(app.packageName, app.appName, netType, simSlot, currentLimit)
+                            },
+                            onDisableNetworkLimit = { netType, simSlot ->
+                                onDisableAppNetworkLimit(app.packageName, app.appName, netType, simSlot)
                             }
                         )
                     }
@@ -372,10 +374,11 @@ fun AppControlScreen(
                             expandedPackageName = if (expandedPackageName == app.packageName) null else app.packageName
                         },
                         onRequestBlockToggle = { onRequestBlockToggle(app.packageName, app.appName, it) },
-                        onOpenSetLimit = { onOpenSetAppLimit(app.packageName, app.appName, rule?.dailyLimitBytes) },
-                        onDisableLimit = { onDisableAppLimit(app.packageName, app.appName) },
-                        onUpdateNetworkTargets = { wifi, sim1, sim2 ->
-                            onUpdateAppNetworkTargets(app.packageName, app.appName, wifi, sim1, sim2)
+                        onOpenSetNetworkLimit = { netType, simSlot, currentLimit ->
+                            onOpenSetAppNetworkLimit(app.packageName, app.appName, netType, simSlot, currentLimit)
+                        },
+                        onDisableNetworkLimit = { netType, simSlot ->
+                            onDisableAppNetworkLimit(app.packageName, app.appName, netType, simSlot)
                         }
                     )
                 }
@@ -392,27 +395,23 @@ private fun AppRuleCard(
     isPinned: Boolean,
     onCardClick: () -> Unit,
     onRequestBlockToggle: (Boolean) -> Unit,
-    onOpenSetLimit: () -> Unit,
-    onDisableLimit: () -> Unit,
-    onUpdateNetworkTargets: (targetWifi: Boolean, targetSim1: Boolean, targetSim2: Boolean) -> Unit
+    onOpenSetNetworkLimit: (networkType: NetworkType, simSlot: Int, currentLimitBytes: Long?) -> Unit,
+    onDisableNetworkLimit: (networkType: NetworkType, simSlot: Int) -> Unit
 ) {
     val isBlocked = rule?.isFullyBlocked == true
-    val hasLimit = rule?.dailyLimitEnabled == true && (rule.dailyLimitBytes ?: 0L) > 0L
-    val usedBytes = rule?.usedBytesToday ?: 0L
-    val limitBytes = rule?.dailyLimitBytes ?: 0L
-    val targetWifi = rule?.targetWifi ?: true
-    val targetSim1 = rule?.targetSim1 ?: true
-    val targetSim2 = rule?.targetSim2 ?: true
+    val wifiLimit = rule?.wifiDailyLimitBytes
+    val wifiEnabled = rule?.wifiDailyLimitEnabled == true && (wifiLimit ?: 0L) > 0L
+    val wifiUsed = rule?.wifiUsedBytesToday ?: 0L
 
-    val ratio = if (hasLimit && limitBytes > 0L) {
-        (usedBytes.toDouble() / limitBytes.toDouble()).coerceIn(0.0, 1.0)
-    } else 0.0
+    val sim1Limit = rule?.sim1DailyLimitBytes
+    val sim1Enabled = rule?.sim1DailyLimitEnabled == true && (sim1Limit ?: 0L) > 0L
+    val sim1Used = rule?.sim1UsedBytesToday ?: 0L
 
-    val progressColor = when {
-        ratio >= 1.0 -> VlastTokens.SemanticRed
-        ratio >= 0.75 -> VlastTokens.SemanticYellow
-        else -> VlastTokens.SemanticGreen
-    }
+    val sim2Limit = rule?.sim2DailyLimitBytes
+    val sim2Enabled = rule?.sim2DailyLimitEnabled == true && (sim2Limit ?: 0L) > 0L
+    val sim2Used = rule?.sim2UsedBytesToday ?: 0L
+
+    val hasAnyLimit = wifiEnabled || sim1Enabled || sim2Enabled
 
     Box(
         modifier = Modifier
@@ -423,7 +422,7 @@ private fun AppRuleCard(
                 width = 1.dp,
                 color = when {
                     isBlocked -> VlastTokens.SemanticRed.copy(alpha = 0.5f)
-                    hasLimit && rule?.isLimitReached == true -> VlastTokens.SemanticRed.copy(alpha = 0.5f)
+                    rule?.isLimitReached == true -> VlastTokens.SemanticRed.copy(alpha = 0.5f)
                     isPinned -> VlastTokens.BrandAmber.copy(alpha = 0.35f)
                     else -> VlastTokens.DarkBorder
                 },
@@ -499,34 +498,42 @@ private fun AppRuleCard(
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Badges or Subtitle
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        if (isBlocked) {
-                            Text(
-                                text = "محظور بالكامل (${rule?.networkTargetSummary ?: "جميع الشبكات"})",
-                                fontSize = 11.sp,
-                                color = VlastTokens.SemanticRed,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else if (hasLimit) {
-                            val limitDisplay = SmartUnitFormatter.format(limitBytes)
-                            Text(
-                                text = "حد يومي: ${limitDisplay.amount} ${limitDisplay.unit} (${rule?.networkTargetSummary ?: "جميع الشبكات"})",
-                                fontSize = 11.sp,
-                                color = progressColor,
-                                fontWeight = FontWeight.Medium
-                            )
-                        } else {
-                            val usedDisplay = SmartUnitFormatter.format(usedBytes)
-                            Text(
-                                text = "استهلاك اليوم: ${usedDisplay.amount} ${usedDisplay.unit}",
-                                fontSize = 11.sp,
-                                color = VlastTokens.TextMuted
-                            )
+                    // Header Summary Subtitle
+                    if (isBlocked) {
+                        Text(
+                            text = "محظور بالكامل",
+                            fontSize = 11.sp,
+                            color = VlastTokens.SemanticRed,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else if (hasAnyLimit) {
+                        val activeSummaryParts = mutableListOf<String>()
+                        if (wifiEnabled && wifiLimit != null) {
+                            val fmt = SmartUnitFormatter.format(wifiLimit)
+                            activeSummaryParts.add("واي فاي: ${fmt.amount}${fmt.unit}")
                         }
+                        if (sim1Enabled && sim1Limit != null) {
+                            val fmt = SmartUnitFormatter.format(sim1Limit)
+                            activeSummaryParts.add("شريحة 1: ${fmt.amount}${fmt.unit}")
+                        }
+                        if (sim2Enabled && sim2Limit != null) {
+                            val fmt = SmartUnitFormatter.format(sim2Limit)
+                            activeSummaryParts.add("شريحة 2: ${fmt.amount}${fmt.unit}")
+                        }
+                        Text(
+                            text = activeSummaryParts.joinToString(" | "),
+                            fontSize = 11.sp,
+                            color = VlastTokens.BrandCyan,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        val totalUsed = wifiUsed + sim1Used + sim2Used
+                        val usedFmt = SmartUnitFormatter.format(totalUsed)
+                        Text(
+                            text = "استهلاك اليوم: ${usedFmt.amount} ${usedFmt.unit}",
+                            fontSize = 11.sp,
+                            color = VlastTokens.TextMuted
+                        )
                     }
                 }
 
@@ -538,7 +545,7 @@ private fun AppRuleCard(
                         tint = VlastTokens.SemanticRed,
                         modifier = Modifier.size(20.dp)
                     )
-                } else if (hasLimit && rule?.isLimitReached == true) {
+                } else if (rule?.isLimitReached == true) {
                     Icon(
                         imageVector = Icons.Filled.Warning,
                         contentDescription = "تجاوز الحد",
@@ -590,200 +597,143 @@ private fun AppRuleCard(
 
                     Spacer(modifier = Modifier.height(VlastTokens.Space12))
 
-                    // 2) Daily Limit Section
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "الحد اليومي المخصص",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = VlastTokens.TextPrimary
-                            )
-                            Text(
-                                text = if (hasLimit) {
-                                    val lim = SmartUnitFormatter.format(limitBytes)
-                                    "الحد الحالي: ${lim.amount} ${lim.unit}"
-                                } else {
-                                    "لا يوجد حد يومي مفعل (استهلاك غير محدود)"
-                                },
-                                fontSize = 11.sp,
-                                color = VlastTokens.TextMuted
-                            )
-                        }
+                    // 2) Per-Network Daily Limits Section Header
+                    Text(
+                        text = "الحدود اليومية المستقلة حسب الشبكة:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = VlastTokens.TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(VlastTokens.Space8))
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            if (hasLimit) {
-                                OutlinedButton(
-                                    onClick = onDisableLimit,
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = VlastTokens.SemanticRed),
-                                    shape = RoundedCornerShape(VlastTokens.RadiusSmall)
-                                ) {
-                                    Text("إلغاء الحد", fontSize = 11.sp)
-                                }
-                            }
-                            Button(
-                                onClick = onOpenSetLimit,
-                                colors = ButtonDefaults.buttonColors(containerColor = VlastTokens.BrandCyan),
-                                shape = RoundedCornerShape(VlastTokens.RadiusSmall)
-                            ) {
-                                Text(
-                                    text = if (hasLimit) "تعديل الحد" else "تحديد حد",
-                                    fontSize = 11.sp,
-                                    color = VlastTokens.DarkBackground,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                    // Wi-Fi Limit Card
+                    AppNetworkLimitRow(
+                        networkTitle = "الواي فاي (Wi-Fi)",
+                        limitBytes = wifiLimit,
+                        isEnabled = wifiEnabled,
+                        usedBytes = wifiUsed,
+                        onOpenSet = { onOpenSetNetworkLimit(NetworkType.WIFI, 0, wifiLimit) },
+                        onDisable = { onDisableNetworkLimit(NetworkType.WIFI, 0) }
+                    )
 
-                    // 3) Network Selection Section
-                    Spacer(modifier = Modifier.height(VlastTokens.Space12))
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
-                            .background(VlastTokens.DarkSurface)
-                            .padding(VlastTokens.Space8)
-                    ) {
-                        Text(
-                            text = "نطاق الشبكة (الشرائح والواي فاي المطبقة):",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = VlastTokens.TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Wifi Choice Chip
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
-                                    .background(if (targetWifi) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant)
-                                    .border(1.dp, if (targetWifi) VlastTokens.BrandCyan else VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusSmall))
-                                    .clickable {
-                                        onUpdateNetworkTargets(!targetWifi, targetSim1, targetSim2)
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "الواي فاي ${if (targetWifi) "✓" else ""}",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (targetWifi) VlastTokens.DarkBackground else VlastTokens.TextMuted
-                                )
-                            }
+                    Spacer(modifier = Modifier.height(VlastTokens.Space8))
 
-                            // SIM 1 Choice Chip
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
-                                    .background(if (targetSim1) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant)
-                                    .border(1.dp, if (targetSim1) VlastTokens.BrandCyan else VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusSmall))
-                                    .clickable {
-                                        onUpdateNetworkTargets(targetWifi, !targetSim1, targetSim2)
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "الشريحة 1 ${if (targetSim1) "✓" else ""}",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (targetSim1) VlastTokens.DarkBackground else VlastTokens.TextMuted
-                                )
-                            }
+                    // SIM 1 Limit Card
+                    AppNetworkLimitRow(
+                        networkTitle = "الشريحة 1 (SIM 1)",
+                        limitBytes = sim1Limit,
+                        isEnabled = sim1Enabled,
+                        usedBytes = sim1Used,
+                        onOpenSet = { onOpenSetNetworkLimit(NetworkType.MOBILE, 0, sim1Limit) },
+                        onDisable = { onDisableNetworkLimit(NetworkType.MOBILE, 0) }
+                    )
 
-                            // SIM 2 Choice Chip
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
-                                    .background(if (targetSim2) VlastTokens.BrandCyan else VlastTokens.DarkSurfaceVariant)
-                                    .border(1.dp, if (targetSim2) VlastTokens.BrandCyan else VlastTokens.DarkBorder, RoundedCornerShape(VlastTokens.RadiusSmall))
-                                    .clickable {
-                                        onUpdateNetworkTargets(targetWifi, targetSim1, !targetSim2)
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "الشريحة 2 ${if (targetSim2) "✓" else ""}",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (targetSim2) VlastTokens.DarkBackground else VlastTokens.TextMuted
-                                )
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(VlastTokens.Space8))
 
-                    // 4) Usage Display with Semantic Color
-                    Spacer(modifier = Modifier.height(VlastTokens.Space12))
-                    val usedFormatted = SmartUnitFormatter.format(usedBytes)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
-                            .background(VlastTokens.DarkSurface)
-                            .padding(VlastTokens.Space8)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "استهلاك التطبيق اليوم:",
-                                fontSize = 11.sp,
-                                color = VlastTokens.TextSecondary
-                            )
-                            Text(
-                                text = "${usedFormatted.amount} ${usedFormatted.unit}",
-                                fontSize = 12.sp,
-                                fontFamily = NumberFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                color = progressColor
-                            )
-                        }
-
-                        if (hasLimit && limitBytes > 0L) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            LinearProgressIndicator(
-                                progress = { ratio.toFloat() },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = progressColor,
-                                trackColor = VlastTokens.DarkBorder
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                val remaining = (limitBytes - usedBytes).coerceAtLeast(0L)
-                                val remainingFormatted = SmartUnitFormatter.format(remaining)
-                                Text(
-                                    text = if (rule?.isLimitReached == true) "تم استهلاك الحد المخصص بالكامل" else "المتبقي: ${remainingFormatted.amount} ${remainingFormatted.unit}",
-                                    fontSize = 10.sp,
-                                    color = if (rule?.isLimitReached == true) VlastTokens.SemanticRed else VlastTokens.TextMuted
-                                )
-                                val pct = (ratio * 100).toInt()
-                                Text(
-                                    text = "$pct%",
-                                    fontSize = 10.sp,
-                                    fontFamily = NumberFontFamily,
-                                    color = progressColor,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                    // SIM 2 Limit Card
+                    AppNetworkLimitRow(
+                        networkTitle = "الشريحة 2 (SIM 2)",
+                        limitBytes = sim2Limit,
+                        isEnabled = sim2Enabled,
+                        usedBytes = sim2Used,
+                        onOpenSet = { onOpenSetNetworkLimit(NetworkType.MOBILE, 1, sim2Limit) },
+                        onDisable = { onDisableNetworkLimit(NetworkType.MOBILE, 1) }
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AppNetworkLimitRow(
+    networkTitle: String,
+    limitBytes: Long?,
+    isEnabled: Boolean,
+    usedBytes: Long,
+    onOpenSet: () -> Unit,
+    onDisable: () -> Unit
+) {
+    val usedFmt = SmartUnitFormatter.format(usedBytes)
+    val ratio = if (isEnabled && limitBytes != null && limitBytes > 0L) {
+        (usedBytes.toDouble() / limitBytes.toDouble()).coerceIn(0.0, 1.0)
+    } else 0.0
+
+    val progressColor = when {
+        ratio >= 1.0 -> VlastTokens.SemanticRed
+        ratio >= 0.75 -> VlastTokens.SemanticYellow
+        else -> VlastTokens.SemanticGreen
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(VlastTokens.RadiusSmall))
+            .background(VlastTokens.DarkSurface)
+            .padding(VlastTokens.Space8)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = networkTitle,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = VlastTokens.TextPrimary
+                )
+                Text(
+                    text = if (isEnabled && limitBytes != null && limitBytes > 0L) {
+                        val limFmt = SmartUnitFormatter.format(limitBytes)
+                        "الحد: ${limFmt.amount} ${limFmt.unit} | المستهلك: ${usedFmt.amount} ${usedFmt.unit}"
+                    } else {
+                        "بدون حد يومي (مستهلك: ${usedFmt.amount} ${usedFmt.unit})"
+                    },
+                    fontSize = 10.sp,
+                    color = if (isEnabled) progressColor else VlastTokens.TextMuted
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (isEnabled) {
+                    OutlinedButton(
+                        onClick = onDisable,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = VlastTokens.SemanticRed),
+                        shape = RoundedCornerShape(VlastTokens.RadiusSmall),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text("إلغاء", fontSize = 10.sp)
+                    }
+                }
+                Button(
+                    onClick = onOpenSet,
+                    colors = ButtonDefaults.buttonColors(containerColor = VlastTokens.BrandCyan),
+                    shape = RoundedCornerShape(VlastTokens.RadiusSmall),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (isEnabled) "تعديل" else "تحديد حد",
+                        fontSize = 10.sp,
+                        color = VlastTokens.DarkBackground,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        if (isEnabled && limitBytes != null && limitBytes > 0L) {
+            Spacer(modifier = Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = { ratio.toFloat() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
+                color = progressColor,
+                trackColor = VlastTokens.DarkBorder
+            )
         }
     }
 }

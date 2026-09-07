@@ -465,9 +465,11 @@ class UsageRepository(
         }
     }
 
-    suspend fun setAppDailyLimit(
+    suspend fun setAppNetworkLimit(
         packageName: String,
         appDisplayName: String,
+        networkType: NetworkType,
+        simSlot: Int,
         limitBytes: Long?,
         enabled: Boolean
     ) = withContext(ioDispatcher) {
@@ -475,28 +477,72 @@ class UsageRepository(
             val today = getTodayDateString()
             val existing = managedAppRuleDao?.getRuleSync(packageName)
             if (existing != null) {
-                managedAppRuleDao.updateLimit(packageName, limitBytes, enabled)
+                when (networkType) {
+                    NetworkType.WIFI -> managedAppRuleDao.updateWifiLimit(packageName, limitBytes, enabled)
+                    NetworkType.MOBILE -> if (simSlot == 1) {
+                        managedAppRuleDao.updateSim2Limit(packageName, limitBytes, enabled)
+                    } else {
+                        managedAppRuleDao.updateSim1Limit(packageName, limitBytes, enabled)
+                    }
+                    NetworkType.NONE -> {}
+                }
             } else {
-                managedAppRuleDao?.insertOrUpdate(
-                    ManagedAppRuleEntity(
+                val entity = when (networkType) {
+                    NetworkType.WIFI -> ManagedAppRuleEntity(
                         packageName = packageName,
                         appDisplayName = appDisplayName,
-                        dailyLimitBytes = limitBytes,
-                        dailyLimitEnabled = enabled,
+                        wifiDailyLimitBytes = limitBytes,
+                        wifiDailyLimitEnabled = enabled,
                         lastResetDate = today
                     )
-                )
+                    NetworkType.MOBILE -> if (simSlot == 1) {
+                        ManagedAppRuleEntity(
+                            packageName = packageName,
+                            appDisplayName = appDisplayName,
+                            sim2DailyLimitBytes = limitBytes,
+                            sim2DailyLimitEnabled = enabled,
+                            lastResetDate = today
+                        )
+                    } else {
+                        ManagedAppRuleEntity(
+                            packageName = packageName,
+                            appDisplayName = appDisplayName,
+                            sim1DailyLimitBytes = limitBytes,
+                            sim1DailyLimitEnabled = enabled,
+                            lastResetDate = today
+                        )
+                    }
+                    NetworkType.NONE -> ManagedAppRuleEntity(
+                        packageName = packageName,
+                        appDisplayName = appDisplayName,
+                        lastResetDate = today
+                    )
+                }
+                managedAppRuleDao?.insertOrUpdate(entity)
             }
 
-            // Section 5: Log to Activity Log
+            val netLabel = when (networkType) {
+                NetworkType.WIFI -> "الواي فاي"
+                NetworkType.MOBILE -> if (simSlot == 1) "الشريحة 2" else "الشريحة 1"
+                NetworkType.NONE -> "الشبكة"
+            }
             val limitStr = if (limitBytes != null) com.example.core.model.SmartUnitFormatter.formatDisplay(limitBytes) else "بدون حد"
             logActivity(
                 eventType = ActivityLogEntry.EventType.CONFIG_CHANGED,
                 reason = ActivityLogEntry.SpecificCutReason.LIMIT_EXPANDED,
-                description = if (enabled) "تم تفعيل حد يومي ($limitStr) لتطبيق $appDisplayName." else "تم تعطيل الحد اليومي لتطبيق $appDisplayName.",
+                description = if (enabled) "تم تفعيل حد يومي ($limitStr) لشبكة $netLabel لتطبيق $appDisplayName." else "تم تعطيل الحد اليومي لشبكة $netLabel لتطبيق $appDisplayName.",
                 details = packageName
             )
         }
+    }
+
+    suspend fun setAppDailyLimit(
+        packageName: String,
+        appDisplayName: String,
+        limitBytes: Long?,
+        enabled: Boolean
+    ) = withContext(ioDispatcher) {
+        setAppNetworkLimit(packageName, appDisplayName, NetworkType.WIFI, 0, limitBytes, enabled)
     }
 
     suspend fun setAppNetworkTargets(
@@ -532,9 +578,22 @@ class UsageRepository(
         }
     }
 
-    suspend fun recordAppBytes(packageName: String, bytes: Long): ManagedAppRule? = withContext(ioDispatcher) {
+    suspend fun recordAppBytes(
+        packageName: String,
+        bytes: Long,
+        networkType: NetworkType = NetworkType.WIFI,
+        simSlot: Int = 0
+    ): ManagedAppRule? = withContext(ioDispatcher) {
         val today = getTodayDateString()
-        managedAppRuleDao?.addAppUsageBytes(packageName, bytes, today)
+        when (networkType) {
+            NetworkType.WIFI -> managedAppRuleDao?.addWifiAppUsageBytes(packageName, bytes, today)
+            NetworkType.MOBILE -> if (simSlot == 1) {
+                managedAppRuleDao?.addSim2AppUsageBytes(packageName, bytes, today)
+            } else {
+                managedAppRuleDao?.addSim1AppUsageBytes(packageName, bytes, today)
+            }
+            NetworkType.NONE -> managedAppRuleDao?.addAppUsageBytes(packageName, bytes, today)
+        }
         managedAppRuleDao?.getRuleSync(packageName)?.let { ManagedAppRule.fromEntity(it) }
     }
 

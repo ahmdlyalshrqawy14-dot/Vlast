@@ -341,10 +341,10 @@ class VlastVpnService : VpnService() {
                                     copy.forEach { (pkg, bytes) ->
                                         if (bytes > 0L) {
                                             serviceScope.launch {
-                                                val updated = usageRepository.recordAppBytes(pkg, bytes)
+                                                val updated = usageRepository.recordAppBytes(pkg, bytes, transport, activeSimSlot)
                                                 if (updated != null) {
                                                     managedAppRulesMap[pkg] = updated
-                                                    if (updated.isLimitReached) {
+                                                    if (updated.isLimitReachedForNetwork(transport, activeSimSlot)) {
                                                         handleAppCutoffNotification(pkg, updated.appDisplayName, isLimitExceeded = true)
                                                     }
                                                 }
